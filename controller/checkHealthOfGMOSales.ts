@@ -17,18 +17,23 @@ export async function main() {
     mongoose.connect(process.env.MONGOLAB_URI, mongooseConnectionOptions);
     const gmoNotificationAdapter = sskts.adapter.gmoNotification(mongoose.connection);
 
-    // todo パラメータで期間設定できるようにする？
+    // 15分単位での直近の日時を取得
+    const aggregationUnitTimeInSeconds = 900;
+    const dateNow = moment();
     // tslint:disable-next-line:no-magic-numbers
-    const dateFrom = moment().add(-15, 'minutes').toDate();
-    const dateTo = moment().toDate();
+    const dateTo = moment((dateNow.unix() - dateNow.unix() % aggregationUnitTimeInSeconds) * 1000).toDate();
+    // tslint:disable-next-line:no-magic-numbers
+    const dateFrom = moment(dateTo).add(-aggregationUnitTimeInSeconds, 'seconds').toDate();
+    // const dateTo = moment().toDate();
     const gmoSales = await sskts.service.report.searchGMOSales(dateFrom, dateTo)(gmoNotificationAdapter);
+    debug(dateFrom.toISOString(), dateTo.toISOString());
 
     // オーダーIDごとに有効性確認
     const errors: {
         title: string;
         detail: string;
     }[] = [];
-    const promises = gmoSales.map(async (gmoSale) => {
+    await Promise.all(gmoSales.map(async (gmoSale) => {
         try {
             await compareGMOOrderIdWithTransaction(gmoSale.order_id, gmoSale.amount);
         } catch (error) {
@@ -37,8 +42,8 @@ export async function main() {
                 detail: error.message
             });
         }
-    });
-    await Promise.all(promises);
+    }));
+
     mongoose.disconnect();
 
     let content = '';
