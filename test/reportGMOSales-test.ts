@@ -27,7 +27,7 @@ describe('GMO実売上報告', () => {
     it('ok', async () => {
         const gmoNotificationAdapter = sskts.adapter.gmoNotification(connection);
 
-        const numberOfNotification = 16;
+        const numberOfNotification = 96;
         const notifications = Array.from(Array(numberOfNotification)).map((__, index) => {
             // tslint:disable-next-line:no-magic-numbers
             const amount = parseInt(_(_.keys(Array.from(Array(9)))).shuffle()[0], 10) * 1000;

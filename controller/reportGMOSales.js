@@ -27,7 +27,7 @@ function main() {
         // todo パラメータで期間設定できるようにする？
         // tslint:disable-next-line:no-magic-numbers
         const aggregationUnitTimeInSeconds = 900; // 集計単位時間(秒)
-        const numberOfAggregationUnit = 16; // 集計単位数
+        const numberOfAggregationUnit = 96; // 集計単位数
         const dateNow = moment();
         const dateNowByUnitTime = moment.unix((dateNow.unix() - (dateNow.unix() % aggregationUnitTimeInSeconds)));
         // 集計単位数分の集計を行う
@@ -59,15 +59,17 @@ function main() {
             chls: '5,0,0',
             chxl: '0:|',
             chdl: '金額',
-            chs: '400x200'
+            chs: '300x100'
         };
         params.chd += aggregations.map((agrgegation) => agrgegation.totalAmount).join(',');
-        params.chxl += aggregations.map((agrgegation) => moment(agrgegation.dateTo).format('HH:mm')).join('|');
-        const imageUrl = `https://chart.googleapis.com/chart?${querystring.stringify(params)}`;
-        debug(params);
+        params.chxl += '24時間前|18時間前|12時間前|6時間前|0時間前'; // x軸
+        const imageThumbnail = `https://chart.googleapis.com/chart?${querystring.stringify(params)}`;
+        debug('imageThumbnail:', imageThumbnail);
+        params.chs = '750x250';
+        const imageFullsize = `https://chart.googleapis.com/chart?${querystring.stringify(params)}`;
         const lastAggregation = aggregations[aggregations.length - 1];
         yield sskts.service.notification.report2developers(`GMO実売上集計\n${moment(lastAggregation.dateFrom).format('MM/DD HH:mm:ss')}-${moment(lastAggregation.dateTo).format('MM/DD HH:mm:ss')}`, `取引数: ${lastAggregation.gmoSales.length}
-合計金額: ${lastAggregation.totalAmount}`, imageUrl, imageUrl)();
+合計金額: ${lastAggregation.totalAmount}`, imageThumbnail, imageFullsize)();
     });
 }
 exports.main = main;
