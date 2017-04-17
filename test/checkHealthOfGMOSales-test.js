@@ -19,15 +19,21 @@ const assert = require("assert");
 const moment = require("moment");
 const mongoose = require("mongoose");
 const CheckHealthOfGMOSalesController = require("../controller/checkHealthOfGMOSales");
-let orderSequence = 0;
-let reserveNumSequence = 0;
-beforeEach(() => __awaiter(this, void 0, void 0, function* () {
-    // 全て削除してからテスト開始
-    const transactionAdapter = sskts.adapter.transaction(mongoose.connection);
-    yield transactionAdapter.transactionModel.remove({}).exec();
-    yield transactionAdapter.transactionEventModel.remove({}).exec();
-}));
 describe('GMO実売上健康診断 GMOオーダーIDとDBの取引を比較する', () => {
+    let connection;
+    let orderSequence = 0;
+    let reserveNumSequence = 0;
+    before((done) => {
+        mongoose.disconnect().then(() => __awaiter(this, void 0, void 0, function* () {
+            mongoose.connect(process.env.MONGOLAB_URI);
+            connection = mongoose.createConnection(process.env.MONGOLAB_URI);
+            // 全て削除してからテスト開始
+            const transactionAdapter = sskts.adapter.transaction(connection);
+            yield transactionAdapter.transactionModel.remove({}).exec();
+            yield transactionAdapter.transactionEventModel.remove({}).exec();
+            done();
+        }));
+    });
     it('取引が存在しない', () => __awaiter(this, void 0, void 0, function* () {
         const orderId = '201704161180000000100';
         const amount = 1234;
@@ -49,7 +55,7 @@ describe('GMO実売上健康診断 GMOオーダーIDとDBの取引を比較す�
         const theaterCode = '118';
         const orderId = createOrderId(closedAt.toDate(), theaterCode, reserveNum, orderSequence);
         const amount = 1234;
-        const transactionAdapter = sskts.adapter.transaction(mongoose.connection);
+        const transactionAdapter = sskts.adapter.transaction(connection);
         const transaction = sskts.factory.transaction.create({
             status: sskts.factory.transactionStatus.CLOSED,
             owners: [],
@@ -100,7 +106,7 @@ describe('GMO実売上健康診断 GMOオーダーIDとDBの取引を比較す�
         const theaterCode = '118';
         const orderId = createOrderId(closedAt.toDate(), theaterCode, reserveNum, orderSequence);
         const amount = 1234;
-        const transactionAdapter = sskts.adapter.transaction(mongoose.connection);
+        const transactionAdapter = sskts.adapter.transaction(connection);
         const transaction = sskts.factory.transaction.create({
             status: sskts.factory.transactionStatus.CLOSED,
             owners: [],

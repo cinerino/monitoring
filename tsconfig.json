@@ -1,4 +1,3 @@
-// read http://json.schemastore.org/tsconfig
 {
     "compilerOptions": {
         "allowUnreachableCode": false,
@@ -39,6 +38,8 @@
         "watch": false
     },
     "exclude": [
-        "node_modules"
+        "docs",
+        "node_modules",
+        "types"
     ]
 }

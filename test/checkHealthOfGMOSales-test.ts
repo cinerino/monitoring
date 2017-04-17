@@ -11,17 +11,25 @@ import * as mongoose from 'mongoose';
 
 import * as CheckHealthOfGMOSalesController from '../controller/checkHealthOfGMOSales';
 
-let orderSequence = 0;
-let reserveNumSequence = 0;
-beforeEach(async () => {
-    // 全て削除してからテスト開始
-    const transactionAdapter = sskts.adapter.transaction(mongoose.connection);
-
-    await transactionAdapter.transactionModel.remove({}).exec();
-    await transactionAdapter.transactionEventModel.remove({}).exec();
-});
-
 describe('GMO実売上健康診断 GMOオーダーIDとDBの取引を比較する', () => {
+    let connection: mongoose.Connection;
+    let orderSequence = 0;
+    let reserveNumSequence = 0;
+    before((done) => {
+        mongoose.disconnect().then(async () => {
+            mongoose.connect(process.env.MONGOLAB_URI);
+            connection = mongoose.createConnection(process.env.MONGOLAB_URI);
+
+            // 全て削除してからテスト開始
+            const transactionAdapter = sskts.adapter.transaction(connection);
+
+            await transactionAdapter.transactionModel.remove({}).exec();
+            await transactionAdapter.transactionEventModel.remove({}).exec();
+
+            done();
+        });
+    });
+
     it('取引が存在しない', async () => {
         const orderId = '201704161180000000100';
         const amount = 1234;
@@ -46,7 +54,7 @@ describe('GMO実売上健康診断 GMOオーダーIDとDBの取引を比較す�
         const orderId = createOrderId(closedAt.toDate(), theaterCode, reserveNum, orderSequence);
         const amount = 1234;
 
-        const transactionAdapter = sskts.adapter.transaction(mongoose.connection);
+        const transactionAdapter = sskts.adapter.transaction(connection);
         const transaction = sskts.factory.transaction.create({
             status: sskts.factory.transactionStatus.CLOSED,
             owners: [],
@@ -105,7 +113,7 @@ describe('GMO実売上健康診断 GMOオーダーIDとDBの取引を比較す�
         const orderId = createOrderId(closedAt.toDate(), theaterCode, reserveNum, orderSequence);
         const amount = 1234;
 
-        const transactionAdapter = sskts.adapter.transaction(mongoose.connection);
+        const transactionAdapter = sskts.adapter.transaction(connection);
         const transaction = sskts.factory.transaction.create({
             status: sskts.factory.transactionStatus.CLOSED,
             owners: [],
