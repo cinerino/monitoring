@@ -12,18 +12,20 @@ import mongooseConnectionOptions from '../mongooseConnectionOptions';
 
 (<any>mongoose).Promise = global.Promise;
 const debug = createDebug('sskts-reportjobs:controller:checkHealthOfGMOSales');
+/**
+ * 集計の時間単位(秒)
+ */
+const AGGREGATION_UNIT_TIME_IN_SECONDS = 3600;
 
 export async function main() {
     mongoose.connect(process.env.MONGOLAB_URI, mongooseConnectionOptions);
     const gmoNotificationAdapter = sskts.adapter.gmoNotification(mongoose.connection);
 
-    // 15分単位での直近の日時を取得
-    const aggregationUnitTimeInSeconds = 900;
     const dateNow = moment();
     // tslint:disable-next-line:no-magic-numbers
-    const dateTo = moment((dateNow.unix() - dateNow.unix() % aggregationUnitTimeInSeconds) * 1000).toDate();
+    const dateTo = moment((dateNow.unix() - dateNow.unix() % AGGREGATION_UNIT_TIME_IN_SECONDS) * 1000).toDate();
     // tslint:disable-next-line:no-magic-numbers
-    const dateFrom = moment(dateTo).add(-aggregationUnitTimeInSeconds, 'seconds').toDate();
+    const dateFrom = moment(dateTo).add(-AGGREGATION_UNIT_TIME_IN_SECONDS, 'seconds').toDate();
     // const dateTo = moment().toDate();
     const gmoSales = await sskts.service.report.searchGMOSales(dateFrom, dateTo)(gmoNotificationAdapter);
     debug(dateFrom.toISOString(), dateTo.toISOString());
@@ -46,18 +48,9 @@ export async function main() {
 
     mongoose.disconnect();
 
-    let content = '';
-    if (errors.length > 0) {
-        errors.forEach((error) => {
-            content += `${error.title}\n${error.detail}`;
-        });
-    } else {
-        content = 'healthy';
-    }
-
     await sskts.service.notification.report2developers(
         `GMO実売上健康診断結果\n${moment(dateFrom).format('MM/DD HH:mm:ss')}-${moment(dateTo).format('MM/DD HH:mm:ss')}`,
-        content
+        (errors.length > 0) ? errors.map((error) => `#${error.title}\n${error.detail}`).join('\n') : 'healthy'
     )();
 }
 

@@ -28,10 +28,10 @@ function main() {
         const transactionAdapter = sskts.adapter.transaction(mongoose.connection);
         debug('creating a report...');
         const report = yield sskts.service.report.transactionStatuses()(queueAdapter, transactionAdapter);
-        yield sskts.service.notification.report2developers(`取引集計\n${moment().toISOString()}`, `取引在庫数: ${report.numberOfTransactionsReady}
+        yield sskts.service.notification.report2developers(`取引集計\n${moment().format('MM/DD HH:mm:ss')}`, `取引在庫数: ${report.numberOfTransactionsReady}
 進行中取引数: ${report.numberOfTransactionsUnderway}
-未キューの取引数(成立): ${report.numberOfTransactionsClosedWithQueuesUnexported}
-未キューの取引数(期限切れ): ${report.numberOfTransactionsExpiredWithQueuesUnexported}
+未キュー取引数(成立): ${report.numberOfTransactionsClosedWithQueuesUnexported}
+未キュー取引数(期限切れ): ${report.numberOfTransactionsExpiredWithQueuesUnexported}
 未実行キュー数: ${report.numberOfQueuesUnexecuted}`)();
         mongoose.disconnect();
     });
