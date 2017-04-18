@@ -52,7 +52,7 @@ export async function main() {
                 $lte: dateTo
             }
         }
-    ).sort({ executed_at: -1 }).lean().exec();
+    ).sort({ executed_at: 1 }).lean().exec();
     debug('telemetries:', telemetries.length);
 
     mongoose.disconnect();
@@ -60,24 +60,23 @@ export async function main() {
     await reportNumberOfTransactionsReady(telemetries);
     await reportNumberOfTransactionsUnderway(telemetries);
     await reportNumberOfTransactionsWithQueuesUnexported(telemetries);
-    await reportNumberOfQueuesUnexported(telemetries);
 }
 
 async function reportNumberOfTransactionsReady(telemetries: ITelemetry[]) {
     const params = {
+        chco: '00A5C6',
         chof: 'png',
         cht: 'ls',
         chxt: 'x,y',
         chds: 'a',
         chd: 't:',
         chls: '5,0,0',
-        chxl: '0:|',
+        chxl: '0:|1時間前|50分前|40分前|30分前|20分前|10分前|現在',
         chdl: '取引在庫',
         // chdl: '取引在庫|進行取引|未実行キュー',
-        chs: '90x30'
+        chs: '150x50'
     };
     params.chd += telemetries.map((telemetry) => telemetry.transactions.numberOfReady).join(',');
-    // params.chxl += '24時間前|18時間前|12時間前|6時間前|0時間前'; // x軸
     const imageThumbnail = `https://chart.googleapis.com/chart?${querystring.stringify(params)}`;
     debug('imageThumbnail:', imageThumbnail);
     params.chs = '750x250';
@@ -93,18 +92,18 @@ async function reportNumberOfTransactionsReady(telemetries: ITelemetry[]) {
 
 async function reportNumberOfTransactionsUnderway(telemetries: ITelemetry[]) {
     const params = {
+        chco: '00A5C6',
         chof: 'png',
         cht: 'ls',
         chxt: 'x,y',
         chds: 'a',
         chd: 't:',
         chls: '5,0,0',
-        chxl: '0:|',
+        chxl: '0:|1時間前|50分前|40分前|30分前|20分前|10分前|現在',
         chdl: '進行取引',
-        chs: '90x30'
+        chs: '150x50'
     };
     params.chd += telemetries.map((telemetry) => telemetry.transactions.numberOfUnderway).join(',');
-    // params.chxl += '24時間前|18時間前|12時間前|6時間前|0時間前'; // x軸
     const imageThumbnail = `https://chart.googleapis.com/chart?${querystring.stringify(params)}`;
     debug('imageThumbnail:', imageThumbnail);
     params.chs = '750x250';
@@ -120,45 +119,19 @@ async function reportNumberOfTransactionsUnderway(telemetries: ITelemetry[]) {
 
 async function reportNumberOfTransactionsWithQueuesUnexported(telemetries: ITelemetry[]) {
     const params = {
+        chco: 'FFFF42|00A5C6',
         chof: 'png',
         cht: 'ls',
         chxt: 'x,y',
         chds: 'a',
         chd: 't:',
         chls: '5,0,0',
-        chxl: '0:|',
-        chdl: '未キュー成立取引',
-        chs: '90x30'
+        chxl: '0:|1時間前|50分前|40分前|30分前|20分前|10分前|現在',
+        chdl: '成立キュー|キュー',
+        chs: '150x50'
     };
     params.chd += telemetries.map((telemetry) => telemetry.transactions.numberOfClosedWithQueuesUnexported).join(',');
-    // params.chxl += '24時間前|18時間前|12時間前|6時間前|0時間前'; // x軸
-    const imageThumbnail = `https://chart.googleapis.com/chart?${querystring.stringify(params)}`;
-    debug('imageThumbnail:', imageThumbnail);
-    params.chs = '750x250';
-    const imageFullsize = `https://chart.googleapis.com/chart?${querystring.stringify(params)}`;
-
-    await sskts.service.notification.report2developers(
-        '測定データ報告 未キュー成立取引',
-        '',
-        imageThumbnail,
-        imageFullsize
-    )();
-}
-
-async function reportNumberOfQueuesUnexported(telemetries: ITelemetry[]) {
-    const params = {
-        chof: 'png',
-        cht: 'ls',
-        chxt: 'x,y',
-        chds: 'a',
-        chd: 't:',
-        chls: '5,0,0',
-        chxl: '0:|',
-        chdl: 'キュー',
-        chs: '90x30'
-    };
-    params.chd += telemetries.map((telemetry) => telemetry.queues.numberOfUnexecuted).join(',');
-    // params.chxl += '24時間前|18時間前|12時間前|6時間前|0時間前'; // x軸
+    params.chd += '|' + telemetries.map((telemetry) => telemetry.queues.numberOfUnexecuted).join(',');
     const imageThumbnail = `https://chart.googleapis.com/chart?${querystring.stringify(params)}`;
     debug('imageThumbnail:', imageThumbnail);
     params.chs = '750x250';

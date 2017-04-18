@@ -43,32 +43,31 @@ function main() {
                 $gt: dateFrom,
                 $lte: dateTo
             }
-        }).sort({ executed_at: -1 }).lean().exec();
+        }).sort({ executed_at: 1 }).lean().exec();
         debug('telemetries:', telemetries.length);
         mongoose.disconnect();
         yield reportNumberOfTransactionsReady(telemetries);
         yield reportNumberOfTransactionsUnderway(telemetries);
         yield reportNumberOfTransactionsWithQueuesUnexported(telemetries);
-        yield reportNumberOfQueuesUnexported(telemetries);
     });
 }
 exports.main = main;
 function reportNumberOfTransactionsReady(telemetries) {
     return __awaiter(this, void 0, void 0, function* () {
         const params = {
+            chco: '00A5C6',
             chof: 'png',
             cht: 'ls',
             chxt: 'x,y',
             chds: 'a',
             chd: 't:',
             chls: '5,0,0',
-            chxl: '0:|',
+            chxl: '0:|1時間前|50分前|40分前|30分前|20分前|10分前|現在',
             chdl: '取引在庫',
             // chdl: '取引在庫|進行取引|未実行キュー',
-            chs: '90x30'
+            chs: '150x50'
         };
         params.chd += telemetries.map((telemetry) => telemetry.transactions.numberOfReady).join(',');
-        // params.chxl += '24時間前|18時間前|12時間前|6時間前|0時間前'; // x軸
         const imageThumbnail = `https://chart.googleapis.com/chart?${querystring.stringify(params)}`;
         debug('imageThumbnail:', imageThumbnail);
         params.chs = '750x250';
@@ -79,18 +78,18 @@ function reportNumberOfTransactionsReady(telemetries) {
 function reportNumberOfTransactionsUnderway(telemetries) {
     return __awaiter(this, void 0, void 0, function* () {
         const params = {
+            chco: '00A5C6',
             chof: 'png',
             cht: 'ls',
             chxt: 'x,y',
             chds: 'a',
             chd: 't:',
             chls: '5,0,0',
-            chxl: '0:|',
+            chxl: '0:|1時間前|50分前|40分前|30分前|20分前|10分前|現在',
             chdl: '進行取引',
-            chs: '90x30'
+            chs: '150x50'
         };
         params.chd += telemetries.map((telemetry) => telemetry.transactions.numberOfUnderway).join(',');
-        // params.chxl += '24時間前|18時間前|12時間前|6時間前|0時間前'; // x軸
         const imageThumbnail = `https://chart.googleapis.com/chart?${querystring.stringify(params)}`;
         debug('imageThumbnail:', imageThumbnail);
         params.chs = '750x250';
@@ -101,40 +100,19 @@ function reportNumberOfTransactionsUnderway(telemetries) {
 function reportNumberOfTransactionsWithQueuesUnexported(telemetries) {
     return __awaiter(this, void 0, void 0, function* () {
         const params = {
+            chco: 'FFFF42|00A5C6',
             chof: 'png',
             cht: 'ls',
             chxt: 'x,y',
             chds: 'a',
             chd: 't:',
             chls: '5,0,0',
-            chxl: '0:|',
-            chdl: '未キュー成立取引',
-            chs: '90x30'
+            chxl: '0:|1時間前|50分前|40分前|30分前|20分前|10分前|現在',
+            chdl: '成立キュー|キュー',
+            chs: '150x50'
         };
         params.chd += telemetries.map((telemetry) => telemetry.transactions.numberOfClosedWithQueuesUnexported).join(',');
-        // params.chxl += '24時間前|18時間前|12時間前|6時間前|0時間前'; // x軸
-        const imageThumbnail = `https://chart.googleapis.com/chart?${querystring.stringify(params)}`;
-        debug('imageThumbnail:', imageThumbnail);
-        params.chs = '750x250';
-        const imageFullsize = `https://chart.googleapis.com/chart?${querystring.stringify(params)}`;
-        yield sskts.service.notification.report2developers('測定データ報告 未キュー成立取引', '', imageThumbnail, imageFullsize)();
-    });
-}
-function reportNumberOfQueuesUnexported(telemetries) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const params = {
-            chof: 'png',
-            cht: 'ls',
-            chxt: 'x,y',
-            chds: 'a',
-            chd: 't:',
-            chls: '5,0,0',
-            chxl: '0:|',
-            chdl: 'キュー',
-            chs: '90x30'
-        };
-        params.chd += telemetries.map((telemetry) => telemetry.queues.numberOfUnexecuted).join(',');
-        // params.chxl += '24時間前|18時間前|12時間前|6時間前|0時間前'; // x軸
+        params.chd += '|' + telemetries.map((telemetry) => telemetry.queues.numberOfUnexecuted).join(',');
         const imageThumbnail = `https://chart.googleapis.com/chart?${querystring.stringify(params)}`;
         debug('imageThumbnail:', imageThumbnail);
         params.chs = '750x250';
