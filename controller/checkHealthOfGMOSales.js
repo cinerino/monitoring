@@ -1,4 +1,9 @@
 "use strict";
+/**
+ * GMO実売上の健康診断を実施する
+ *
+ * @ignore
+ */
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     return new (P || (P = Promise))(function (resolve, reject) {
         function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
@@ -8,11 +13,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-/**
- * GMO実売上の健康診断を実施する
- *
- * @ignore
- */
 const sskts = require("@motionpicture/sskts-domain");
 const createDebug = require("debug");
 const moment = require("moment");

@@ -1,8 +1,10 @@
 /**
  * 測定データ報告テスト
+ * todo テストコードが不完全
  *
  * @ignore
  */
+
 // import * as sskts from '@motionpicture/sskts-domain';
 // import * as moment from 'moment';
 import * as mongoose from 'mongoose';

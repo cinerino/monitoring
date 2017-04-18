@@ -1,4 +1,10 @@
 "use strict";
+/**
+ * 測定データ報告テスト
+ * todo テストコードが不完全
+ *
+ * @ignore
+ */
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     return new (P || (P = Promise))(function (resolve, reject) {
         function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
@@ -8,11 +14,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-/**
- * 測定データ報告テスト
- *
- * @ignore
- */
 // import * as sskts from '@motionpicture/sskts-domain';
 // import * as moment from 'moment';
 const mongoose = require("mongoose");

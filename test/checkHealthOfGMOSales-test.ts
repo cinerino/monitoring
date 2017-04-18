@@ -3,6 +3,7 @@
  *
  * @ignore
  */
+
 import * as GMO from '@motionpicture/gmo-service';
 import * as sskts from '@motionpicture/sskts-domain';
 import * as assert from 'assert';
