@@ -48,6 +48,7 @@ function main() {
         mongoose.disconnect();
         yield reportNumberOfTransactionsReady(telemetries);
         yield reportNumberOfTransactionsUnderway(telemetries);
+        yield reportNumberOfTransactionsWithQueuesUnexported(telemetries);
         yield reportNumberOfQueuesUnexported(telemetries);
     });
 }
@@ -66,7 +67,7 @@ function reportNumberOfTransactionsReady(telemetries) {
             // chdl: '取引在庫|進行取引|未実行キュー',
             chs: '90x30'
         };
-        params.chd += telemetries.map((telemetry) => (telemetry !== null) ? telemetry.transactions.numberOfReady : '').join(',');
+        params.chd += telemetries.map((telemetry) => telemetry.transactions.numberOfReady).join(',');
         // params.chxl += '24時間前|18時間前|12時間前|6時間前|0時間前'; // x軸
         const imageThumbnail = `https://chart.googleapis.com/chart?${querystring.stringify(params)}`;
         debug('imageThumbnail:', imageThumbnail);
@@ -88,13 +89,35 @@ function reportNumberOfTransactionsUnderway(telemetries) {
             chdl: '進行取引',
             chs: '90x30'
         };
-        params.chd += telemetries.map((telemetry) => (telemetry !== null) ? telemetry.transactions.numberOfUnderway : '').join(',');
+        params.chd += telemetries.map((telemetry) => telemetry.transactions.numberOfUnderway).join(',');
         // params.chxl += '24時間前|18時間前|12時間前|6時間前|0時間前'; // x軸
         const imageThumbnail = `https://chart.googleapis.com/chart?${querystring.stringify(params)}`;
         debug('imageThumbnail:', imageThumbnail);
         params.chs = '750x250';
         const imageFullsize = `https://chart.googleapis.com/chart?${querystring.stringify(params)}`;
         yield sskts.service.notification.report2developers('測定データ報告 進行取引', '', imageThumbnail, imageFullsize)();
+    });
+}
+function reportNumberOfTransactionsWithQueuesUnexported(telemetries) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const params = {
+            chof: 'png',
+            cht: 'ls',
+            chxt: 'x,y',
+            chds: 'a',
+            chd: 't:',
+            chls: '5,0,0',
+            chxl: '0:|',
+            chdl: '未キュー成立取引',
+            chs: '90x30'
+        };
+        params.chd += telemetries.map((telemetry) => telemetry.transactions.numberOfClosedWithQueuesUnexported).join(',');
+        // params.chxl += '24時間前|18時間前|12時間前|6時間前|0時間前'; // x軸
+        const imageThumbnail = `https://chart.googleapis.com/chart?${querystring.stringify(params)}`;
+        debug('imageThumbnail:', imageThumbnail);
+        params.chs = '750x250';
+        const imageFullsize = `https://chart.googleapis.com/chart?${querystring.stringify(params)}`;
+        yield sskts.service.notification.report2developers('測定データ報告 未キュー成立取引', '', imageThumbnail, imageFullsize)();
     });
 }
 function reportNumberOfQueuesUnexported(telemetries) {
@@ -110,7 +133,7 @@ function reportNumberOfQueuesUnexported(telemetries) {
             chdl: 'キュー',
             chs: '90x30'
         };
-        params.chd += telemetries.map((telemetry) => (telemetry !== null) ? telemetry.queues.numberOfUnexecuted : '').join(',');
+        params.chd += telemetries.map((telemetry) => telemetry.queues.numberOfUnexecuted).join(',');
         // params.chxl += '24時間前|18時間前|12時間前|6時間前|0時間前'; // x軸
         const imageThumbnail = `https://chart.googleapis.com/chart?${querystring.stringify(params)}`;
         debug('imageThumbnail:', imageThumbnail);

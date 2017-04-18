@@ -42,12 +42,12 @@
   "scripts": {
     "build": "tsc",
     "check": "tslint --type-check --project tsconfig.json -c tslint.json bin/**/*.ts && nsp check && snyk auth && snyk test --ignore-policy",
-    "clean": "rimraf bin/**/*.js test/**/*.js docs/**/* npm-debug.log*",
+    "clean": "rimraf App_Data/**/*.js controller/**/*.js test/**/*.js docs/**/* npm-debug.log*",
     "jsdoc": "node_modules/.bin/jsdoc -c jsdoc.json",
     "test": "npm run check && mocha --no-timeouts --recursive",
     "preversion": "npm run clean && npm run build && npm test",
     "version": "git add -A",
     "postversion": "git push origin"
   },
-  "version": "1.2.1"
+  "version": "1.2.2"
 }

@@ -59,6 +59,7 @@ export async function main() {
 
     await reportNumberOfTransactionsReady(telemetries);
     await reportNumberOfTransactionsUnderway(telemetries);
+    await reportNumberOfTransactionsWithQueuesUnexported(telemetries);
     await reportNumberOfQueuesUnexported(telemetries);
 }
 
@@ -75,7 +76,7 @@ async function reportNumberOfTransactionsReady(telemetries: ITelemetry[]) {
         // chdl: '取引在庫|進行取引|未実行キュー',
         chs: '90x30'
     };
-    params.chd += telemetries.map((telemetry) => (telemetry !== null) ? telemetry.transactions.numberOfReady : '').join(',');
+    params.chd += telemetries.map((telemetry) => telemetry.transactions.numberOfReady).join(',');
     // params.chxl += '24時間前|18時間前|12時間前|6時間前|0時間前'; // x軸
     const imageThumbnail = `https://chart.googleapis.com/chart?${querystring.stringify(params)}`;
     debug('imageThumbnail:', imageThumbnail);
@@ -90,7 +91,7 @@ async function reportNumberOfTransactionsReady(telemetries: ITelemetry[]) {
     )();
 }
 
-async function reportNumberOfTransactionsUnderway(telemetries: (ITelemetry | null)[]) {
+async function reportNumberOfTransactionsUnderway(telemetries: ITelemetry[]) {
     const params = {
         chof: 'png',
         cht: 'ls',
@@ -102,7 +103,7 @@ async function reportNumberOfTransactionsUnderway(telemetries: (ITelemetry | nul
         chdl: '進行取引',
         chs: '90x30'
     };
-    params.chd += telemetries.map((telemetry) => (telemetry !== null) ? telemetry.transactions.numberOfUnderway : '').join(',');
+    params.chd += telemetries.map((telemetry) => telemetry.transactions.numberOfUnderway).join(',');
     // params.chxl += '24時間前|18時間前|12時間前|6時間前|0時間前'; // x軸
     const imageThumbnail = `https://chart.googleapis.com/chart?${querystring.stringify(params)}`;
     debug('imageThumbnail:', imageThumbnail);
@@ -117,7 +118,34 @@ async function reportNumberOfTransactionsUnderway(telemetries: (ITelemetry | nul
     )();
 }
 
-async function reportNumberOfQueuesUnexported(telemetries: (ITelemetry | null)[]) {
+async function reportNumberOfTransactionsWithQueuesUnexported(telemetries: ITelemetry[]) {
+    const params = {
+        chof: 'png',
+        cht: 'ls',
+        chxt: 'x,y',
+        chds: 'a',
+        chd: 't:',
+        chls: '5,0,0',
+        chxl: '0:|',
+        chdl: '未キュー成立取引',
+        chs: '90x30'
+    };
+    params.chd += telemetries.map((telemetry) => telemetry.transactions.numberOfClosedWithQueuesUnexported).join(',');
+    // params.chxl += '24時間前|18時間前|12時間前|6時間前|0時間前'; // x軸
+    const imageThumbnail = `https://chart.googleapis.com/chart?${querystring.stringify(params)}`;
+    debug('imageThumbnail:', imageThumbnail);
+    params.chs = '750x250';
+    const imageFullsize = `https://chart.googleapis.com/chart?${querystring.stringify(params)}`;
+
+    await sskts.service.notification.report2developers(
+        '測定データ報告 未キュー成立取引',
+        '',
+        imageThumbnail,
+        imageFullsize
+    )();
+}
+
+async function reportNumberOfQueuesUnexported(telemetries: ITelemetry[]) {
     const params = {
         chof: 'png',
         cht: 'ls',
@@ -129,7 +157,7 @@ async function reportNumberOfQueuesUnexported(telemetries: (ITelemetry | null)[]
         chdl: 'キュー',
         chs: '90x30'
     };
-    params.chd += telemetries.map((telemetry) => (telemetry !== null) ? telemetry.queues.numberOfUnexecuted : '').join(',');
+    params.chd += telemetries.map((telemetry) => telemetry.queues.numberOfUnexecuted).join(',');
     // params.chxl += '24時間前|18時間前|12時間前|6時間前|0時間前'; // x軸
     const imageThumbnail = `https://chart.googleapis.com/chart?${querystring.stringify(params)}`;
     debug('imageThumbnail:', imageThumbnail);
