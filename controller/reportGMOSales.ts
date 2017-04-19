@@ -9,6 +9,7 @@ import * as createDebug from 'debug';
 import * as moment from 'moment';
 import * as mongoose from 'mongoose';
 import * as querystring from 'querystring';
+import * as request from 'request-promise-native';
 
 import mongooseConnectionOptions from '../mongooseConnectionOptions';
 
@@ -18,6 +19,80 @@ const debug = createDebug('sskts-reportjobs:controller:reportGMOSales');
 export async function main() {
     mongoose.connect(process.env.MONGOLAB_URI, mongooseConnectionOptions);
 
+    await reportGMOSalesAggregations();
+    await reportScatterChartInAmountAndTranDate();
+
+    mongoose.disconnect();
+}
+
+interface IGMONotification4ScatterChart {
+    amount: number;
+    tran_date: string;
+}
+
+/**
+ * 時間帯ごとの実売上をプロットしてみる
+ * todo 調整
+ */
+async function reportScatterChartInAmountAndTranDate() {
+    // ここ24時間の実売上をプロットする
+    const gmoNotificationAdapter = sskts.adapter.gmoNotification(mongoose.connection);
+    const gmoNotifications = <IGMONotification4ScatterChart[]>await gmoNotificationAdapter.gmoNotificationModel.find(
+        {
+            job_cd: 'SALES',
+            tran_date: {
+                // tslint:disable-next-line:no-magic-numbers
+                $gte: moment().add(-3, 'day').format('YYYYMMDDHHmmss'),
+                $lt: moment().format('YYYYMMDDHHmmss')
+            }
+        },
+        'amount tran_date'
+    ).lean().exec();
+    debug('gmoNotifications:', gmoNotifications.length);
+    const maxAmount = gmoNotifications.reduce((a, b) => Math.max(a, b.amount), 0);
+    debug('maxAmount:', maxAmount);
+
+    const params = {
+        chof: 'png',
+        cht: 's',
+        chxt: 'x,y',
+        // tslint:disable-next-line:no-magic-numbers
+        chds: `0,24,0,${maxAmount + 2000}`,
+        chd: 't:',
+        chls: '5,0,0',
+        // tslint:disable-next-line:no-magic-numbers
+        chxr: `0,0,24,1|1,0,${maxAmount + 2000}`,
+        chdl: '金額',
+        chs: '300x100'
+    };
+    // tslint:disable-next-line:no-magic-numbers
+    params.chd += gmoNotifications.map((gmoNotification) => gmoNotification.tran_date.slice(8, 10)).join(',');
+    params.chd += '|' + gmoNotifications.map((gmoNotification) => gmoNotification.amount).join(',');
+    debug('params:', params);
+    const imageThumbnail = `https://chart.googleapis.com/chart?${querystring.stringify(params)}`;
+    let body = await request.get({
+        url: `http://is.gd/create.php?format=simple&format=json&url=${encodeURIComponent(imageThumbnail)}`,
+        json: true
+    }).promise();
+    const imageThumbnailShort = body.shorturl;
+    debug('imageThumbnail:', imageThumbnail);
+    params.chs = '750x250';
+    const imageFullsize = `https://chart.googleapis.com/chart?${querystring.stringify(params)}`;
+    body = await request.get({
+        url: `http://is.gd/create.php?format=simple&format=json&url=${encodeURIComponent(imageFullsize)}`,
+        json: true
+    }).promise();
+    const imageFullsizeShort = body.shorturl;
+
+    await sskts.service.notification.report2developers(
+        'GMO実売上集計',
+        '',
+        imageThumbnailShort,
+        imageFullsizeShort
+    )();
+}
+
+async function reportGMOSalesAggregations() {
     // todo パラメータで期間設定できるようにする？
     // tslint:disable-next-line:no-magic-numbers
     const aggregationUnitTimeInSeconds = 900; // 集計単位時間(秒)
@@ -47,8 +122,6 @@ export async function main() {
     }));
     aggregations = aggregations.reverse();
     debug('aggregations:', aggregations);
-
-    mongoose.disconnect();
 
     const params = {
         chof: 'png',
