@@ -36,14 +36,17 @@ interface IGMONotification4ScatterChart {
  */
 async function reportScatterChartInAmountAndTranDate() {
     // ここ24時間の実売上をプロットする
+    const dateTo = moment();
+    // tslint:disable-next-line:no-magic-numbers
+    const dateFrom = moment(dateTo).add(-3, 'day');
     const gmoNotificationAdapter = sskts.adapter.gmoNotification(mongoose.connection);
     const gmoNotifications = <IGMONotification4ScatterChart[]>await gmoNotificationAdapter.gmoNotificationModel.find(
         {
             job_cd: 'SALES',
             tran_date: {
                 // tslint:disable-next-line:no-magic-numbers
-                $gte: moment().add(-3, 'day').format('YYYYMMDDHHmmss'),
-                $lt: moment().format('YYYYMMDDHHmmss')
+                $gte: dateFrom.format('YYYYMMDDHHmmss'),
+                $lt: dateTo.format('YYYYMMDDHHmmss')
             }
         },
         'amount tran_date'
@@ -85,8 +88,9 @@ async function reportScatterChartInAmountAndTranDate() {
     const imageFullsizeShort = body.shorturl;
 
     await sskts.service.notification.report2developers(
-        'GMO実売上集計',
-        '',
+        `GMO売上散布図
+${dateFrom.format('MM/DD HH:mm:ss')}-${dateTo.format('MM/DD HH:mm:ss')}`,
+        `サンプル数:${gmoNotifications.length}`,
         imageThumbnailShort,
         imageFullsizeShort
     )();
@@ -117,7 +121,8 @@ async function reportGMOSalesAggregations() {
             dateFrom: dateFrom,
             dateTo: dateTo,
             gmoSales: gmoSales,
-            totalAmount: gmoSales.reduce((a, b) => a + b.amount, 0) // 合計金額を算出
+            // tslint:disable-next-line:no-magic-numbers
+            totalAmount: gmoSales.reduce((a, b) => a + parseInt(b.amount, 10), 0) // 合計金額を算出
         };
     }));
     aggregations = aggregations.reverse();
@@ -144,9 +149,9 @@ async function reportGMOSalesAggregations() {
     const lastAggregation = aggregations[aggregations.length - 1];
 
     await sskts.service.notification.report2developers(
-        `GMO実売上集計\n${moment(lastAggregation.dateFrom).format('MM/DD HH:mm:ss')}-${moment(lastAggregation.dateTo).format('MM/DD HH:mm:ss')}`,
-        `取引数: ${lastAggregation.gmoSales.length}
-合計金額: ${lastAggregation.totalAmount}`,
+        `GMO売上金額遷移(15分単位)
+${moment(aggregations[0].dateFrom).format('MM/DD HH:mm:ss')}-${moment(lastAggregation.dateTo).format('MM/DD HH:mm:ss')}`,
+        '',
         imageThumbnail,
         imageFullsize
     )();

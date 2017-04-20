@@ -38,13 +38,16 @@ exports.main = main;
 function reportScatterChartInAmountAndTranDate() {
     return __awaiter(this, void 0, void 0, function* () {
         // ここ24時間の実売上をプロットする
+        const dateTo = moment();
+        // tslint:disable-next-line:no-magic-numbers
+        const dateFrom = moment(dateTo).add(-3, 'day');
         const gmoNotificationAdapter = sskts.adapter.gmoNotification(mongoose.connection);
         const gmoNotifications = yield gmoNotificationAdapter.gmoNotificationModel.find({
             job_cd: 'SALES',
             tran_date: {
                 // tslint:disable-next-line:no-magic-numbers
-                $gte: moment().add(-3, 'day').format('YYYYMMDDHHmmss'),
-                $lt: moment().format('YYYYMMDDHHmmss')
+                $gte: dateFrom.format('YYYYMMDDHHmmss'),
+                $lt: dateTo.format('YYYYMMDDHHmmss')
             }
         }, 'amount tran_date').lean().exec();
         debug('gmoNotifications:', gmoNotifications.length);
@@ -81,7 +84,8 @@ function reportScatterChartInAmountAndTranDate() {
             json: true
         }).promise();
         const imageFullsizeShort = body.shorturl;
-        yield sskts.service.notification.report2developers('GMO実売上集計', '', imageThumbnailShort, imageFullsizeShort)();
+        yield sskts.service.notification.report2developers(`GMO売上散布図
+${dateFrom.format('MM/DD HH:mm:ss')}-${dateTo.format('MM/DD HH:mm:ss')}`, `サンプル数:${gmoNotifications.length}`, imageThumbnailShort, imageFullsizeShort)();
     });
 }
 function reportGMOSalesAggregations() {
@@ -106,7 +110,8 @@ function reportGMOSalesAggregations() {
                 dateFrom: dateFrom,
                 dateTo: dateTo,
                 gmoSales: gmoSales,
-                totalAmount: gmoSales.reduce((a, b) => a + b.amount, 0) // 合計金額を算出
+                // tslint:disable-next-line:no-magic-numbers
+                totalAmount: gmoSales.reduce((a, b) => a + parseInt(b.amount, 10), 0) // 合計金額を算出
             };
         })));
         aggregations = aggregations.reverse();
@@ -129,7 +134,7 @@ function reportGMOSalesAggregations() {
         params.chs = '750x250';
         const imageFullsize = `https://chart.googleapis.com/chart?${querystring.stringify(params)}`;
         const lastAggregation = aggregations[aggregations.length - 1];
-        yield sskts.service.notification.report2developers(`GMO実売上集計\n${moment(lastAggregation.dateFrom).format('MM/DD HH:mm:ss')}-${moment(lastAggregation.dateTo).format('MM/DD HH:mm:ss')}`, `取引数: ${lastAggregation.gmoSales.length}
-合計金額: ${lastAggregation.totalAmount}`, imageThumbnail, imageFullsize)();
+        yield sskts.service.notification.report2developers(`GMO売上金額遷移(15分単位)
+${moment(aggregations[0].dateFrom).format('MM/DD HH:mm:ss')}-${moment(lastAggregation.dateTo).format('MM/DD HH:mm:ss')}`, '', imageThumbnail, imageFullsize)();
     });
 }
