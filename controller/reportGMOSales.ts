@@ -38,7 +38,7 @@ async function reportScatterChartInAmountAndTranDate() {
     // ここ24時間の実売上をプロットする
     const dateTo = moment();
     // tslint:disable-next-line:no-magic-numbers
-    const dateFrom = moment(dateTo).add(-3, 'day');
+    const dateFrom = moment(dateTo).add(-3, 'days');
     const gmoNotificationAdapter = sskts.adapter.gmoNotification(mongoose.connection);
     const gmoNotifications = <IGMONotification4ScatterChart[]>await gmoNotificationAdapter.gmoNotificationModel.find(
         {
@@ -58,19 +58,21 @@ async function reportScatterChartInAmountAndTranDate() {
     const params = {
         chof: 'png',
         cht: 's',
-        chxt: 'x,y',
+        chxt: 'x,x,y,y',
         // tslint:disable-next-line:no-magic-numbers
-        chds: `0,24,0,${maxAmount + 2000}`,
+        chds: `0,24,0,${Math.floor(maxAmount / 100) + 20}`,
         chd: 't:',
         chls: '5,0,0',
+        chxl: '1:|時|3:|百円',
         // tslint:disable-next-line:no-magic-numbers
-        chxr: `0,0,24,1|1,0,${maxAmount + 2000}`,
-        chdl: '金額',
+        chxr: `0,0,24,1|2,0,${Math.floor(maxAmount / 100) + 20}`,
+        // chdl: '金額',
         chs: '300x100'
     };
     // tslint:disable-next-line:no-magic-numbers
-    params.chd += gmoNotifications.map((gmoNotification) => gmoNotification.tran_date.slice(8, 10)).join(',');
-    params.chd += '|' + gmoNotifications.map((gmoNotification) => gmoNotification.amount).join(',');
+    params.chd += gmoNotifications.map((gmoNotification) => Number(gmoNotification.tran_date.slice(8, 10))).join(',');
+    // tslint:disable-next-line:no-magic-numbers
+    params.chd += '|' + gmoNotifications.map((gmoNotification) => Math.floor(gmoNotification.amount / 100)).join(',');
     debug('params:', params);
     const imageThumbnail = `https://chart.googleapis.com/chart?${querystring.stringify(params)}`;
     let body = await request.get({
@@ -131,16 +133,15 @@ async function reportGMOSalesAggregations() {
     const params = {
         chof: 'png',
         cht: 'ls',
-        chxt: 'x,y',
+        chxt: 'x,y,y',
         chds: 'a',
         chd: 't:',
         chls: '5,0,0',
-        chxl: '0:|',
-        chdl: '金額',
+        chxl: '0:|24時間前|18時間前|12時間前|6時間前|0時間前|2:|円',
+        // chdl: '金額',
         chs: '300x100'
     };
     params.chd += aggregations.map((agrgegation) => agrgegation.totalAmount).join(',');
-    params.chxl += '24時間前|18時間前|12時間前|6時間前|0時間前'; // x軸
     const imageThumbnail = `https://chart.googleapis.com/chart?${querystring.stringify(params)}`;
     debug('imageThumbnail:', imageThumbnail);
     params.chs = '750x250';
