@@ -53,24 +53,45 @@ function reportScatterChartInAmountAndTranDate() {
         debug('gmoNotifications:', gmoNotifications.length);
         const maxAmount = gmoNotifications.reduce((a, b) => Math.max(a, b.amount), 0);
         debug('maxAmount:', maxAmount);
+        // 時間帯x金額帯ごとに集計
+        const AMOUNT_UNIT = 1000;
+        const prots = {};
+        gmoNotifications.forEach((gmoNotification) => {
+            // tslint:disable-next-line:no-magic-numbers
+            const x = Number(gmoNotification.tran_date.slice(8, 10));
+            const y = Math.floor(gmoNotification.amount / AMOUNT_UNIT);
+            if (prots[`${x}x${y}`] === undefined) {
+                prots[`${x}x${y}`] = {
+                    x: x,
+                    y: y,
+                    size: 0
+                };
+            }
+            prots[`${x}x${y}`].size += 1;
+        });
+        debug('prots:', prots);
+        const sizeMax = Object.keys(prots).reduce((a, b) => Math.max(a, prots[b].size), 0);
+        debug('sizeMax:', sizeMax);
         const params = {
             chof: 'png',
             cht: 's',
             chxt: 'x,x,y,y',
+            chds: `0,24,0,${Math.floor(maxAmount / AMOUNT_UNIT) + 1}`,
+            chxl: '1:|時台|3:|千円台',
             // tslint:disable-next-line:no-magic-numbers
-            chds: `0,24,0,${Math.floor(maxAmount / 100) + 20}`,
+            chxr: `0,0,24,1|2,0,${Math.floor(maxAmount / AMOUNT_UNIT) + 1}`,
+            chg: '100,100',
             chd: 't:',
             chls: '5,0,0',
-            chxl: '1:|時|3:|百円',
-            // tslint:disable-next-line:no-magic-numbers
-            chxr: `0,0,24,1|2,0,${Math.floor(maxAmount / 100) + 20}`,
             // chdl: '金額',
-            chs: '300x100'
+            chs: '200x100'
         };
+        params.chd += Object.keys(prots).map((key) => prots[key].x).join(',');
+        params.chd += '|' + Object.keys(prots).map((key) => prots[key].y).join(',');
         // tslint:disable-next-line:no-magic-numbers
-        params.chd += gmoNotifications.map((gmoNotification) => Number(gmoNotification.tran_date.slice(8, 10))).join(',');
-        // tslint:disable-next-line:no-magic-numbers
-        params.chd += '|' + gmoNotifications.map((gmoNotification) => Math.floor(gmoNotification.amount / 100)).join(',');
+        params.chd += '|' + Object.keys(prots).map((key) => Math.floor(prots[key].size / sizeMax * 50)).join(',');
+        // params.chd += gmoNotifications.map((gmoNotification) => Number(gmoNotification.tran_date.slice(8, 10))).join(',');
+        // params.chd += '|' + gmoNotifications.map((gmoNotification) => Math.floor(gmoNotification.amount / 100)).join(',');
         debug('params:', params);
         const imageThumbnail = `https://chart.googleapis.com/chart?${querystring.stringify(params)}`;
         let body = yield request.get({
@@ -78,14 +99,14 @@ function reportScatterChartInAmountAndTranDate() {
             json: true
         }).promise();
         const imageThumbnailShort = body.shorturl;
-        debug('imageThumbnail:', imageThumbnail);
-        params.chs = '750x250';
+        params.chs = '800x300';
         const imageFullsize = `https://chart.googleapis.com/chart?${querystring.stringify(params)}`;
         body = yield request.get({
             url: `http://is.gd/create.php?format=simple&format=json&url=${encodeURIComponent(imageFullsize)}`,
             json: true
         }).promise();
         const imageFullsizeShort = body.shorturl;
+        debug('imageFullsizeShort:', imageFullsizeShort);
         yield sskts.service.notification.report2developers(`GMO売上散布図
 ${dateFrom.format('MM/DD HH:mm:ss')}-${dateTo.format('MM/DD HH:mm:ss')}`, `サンプル数:${gmoNotifications.length}`, imageThumbnailShort, imageFullsizeShort)();
     });
@@ -118,18 +139,22 @@ function reportGMOSalesAggregations() {
         })));
         aggregations = aggregations.reverse();
         debug('aggregations:', aggregations);
+        const AMOUNT_UNIT = 100;
         const params = {
             chof: 'png',
             cht: 'ls',
             chxt: 'x,y,y',
+            // chds: '0,400',
             chds: 'a',
+            chxl: '0:|24時間前|18時間前|12時間前|6時間前|0時間前|2:|百円',
+            // chxr: `1,0,400`,
+            chg: '25,10',
             chd: 't:',
             chls: '5,0,0',
-            chxl: '0:|24時間前|18時間前|12時間前|6時間前|0時間前|2:|円',
             // chdl: '金額',
             chs: '300x100'
         };
-        params.chd += aggregations.map((agrgegation) => agrgegation.totalAmount).join(',');
+        params.chd += aggregations.map((agrgegation) => Math.floor(agrgegation.totalAmount / AMOUNT_UNIT)).join(',');
         const imageThumbnail = `https://chart.googleapis.com/chart?${querystring.stringify(params)}`;
         debug('imageThumbnail:', imageThumbnail);
         params.chs = '750x250';
