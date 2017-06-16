@@ -187,10 +187,14 @@ async function reportTransactionRequiredTimes(telemetries: ITelemetry[]) {
         chs: '150x50'
     };
     params.chd += telemetries.map(
-        (telemetry) => Math.floor(
-            // tslint:disable-next-line:no-magic-numbers ミリ秒→秒変換
-            telemetry.flow.transactions.totalRequiredTimeInMilliseconds / telemetry.flow.transactions.numberOfClosed / 1000
-        )
+        (telemetry) => {
+            return (telemetry.flow.transactions.numberOfClosed > 0)
+                ? Math.floor(
+                    // tslint:disable-next-line:no-magic-numbers ミリ秒→秒変換
+                    telemetry.flow.transactions.totalRequiredTimeInMilliseconds / telemetry.flow.transactions.numberOfClosed / 1000
+                )
+                : 0;
+        }
     ).join(',');
     const imageThumbnail = `https://chart.googleapis.com/chart?${querystring.stringify(params)}`;
     const imageThumbnailShort = await request.get({
@@ -237,7 +241,14 @@ async function reportTransactionAmounts(telemetries: ITelemetry[]) {
         chs: '150x50'
     };
     params.chd += telemetries.map(
-        (telemetry) => Math.floor(telemetry.flow.transactions.totalAmount / telemetry.flow.transactions.numberOfClosed)
+        (telemetry) => {
+            return (telemetry.flow.transactions.numberOfClosed > 0)
+                ? Math.floor(
+                    // tslint:disable-next-line:no-magic-numbers ミリ秒→秒変換
+                    telemetry.flow.transactions.totalAmount / telemetry.flow.transactions.numberOfClosed
+                )
+                : 0;
+        }
     ).join(',');
     const imageThumbnail = `https://chart.googleapis.com/chart?${querystring.stringify(params)}`;
     const imageThumbnailShort = await request.get({

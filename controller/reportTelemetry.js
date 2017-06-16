@@ -112,9 +112,13 @@ function reportTransactionRequiredTimes(telemetries) {
             chdl: '所要時間',
             chs: '150x50'
         };
-        params.chd += telemetries.map((telemetry) => Math.floor(
-        // tslint:disable-next-line:no-magic-numbers ミリ秒→秒変換
-        telemetry.flow.transactions.totalRequiredTimeInMilliseconds / telemetry.flow.transactions.numberOfClosed / 1000)).join(',');
+        params.chd += telemetries.map((telemetry) => {
+            return (telemetry.flow.transactions.numberOfClosed > 0)
+                ? Math.floor(
+                // tslint:disable-next-line:no-magic-numbers ミリ秒→秒変換
+                telemetry.flow.transactions.totalRequiredTimeInMilliseconds / telemetry.flow.transactions.numberOfClosed / 1000)
+                : 0;
+        }).join(',');
         const imageThumbnail = `https://chart.googleapis.com/chart?${querystring.stringify(params)}`;
         const imageThumbnailShort = yield request.get({
             url: `http://is.gd/create.php?format=simple&format=json&url=${encodeURIComponent(imageThumbnail)}`,
@@ -152,7 +156,13 @@ function reportTransactionAmounts(telemetries) {
             chdl: '金額',
             chs: '150x50'
         };
-        params.chd += telemetries.map((telemetry) => Math.floor(telemetry.flow.transactions.totalAmount / telemetry.flow.transactions.numberOfClosed)).join(',');
+        params.chd += telemetries.map((telemetry) => {
+            return (telemetry.flow.transactions.numberOfClosed > 0)
+                ? Math.floor(
+                // tslint:disable-next-line:no-magic-numbers ミリ秒→秒変換
+                telemetry.flow.transactions.totalAmount / telemetry.flow.transactions.numberOfClosed)
+                : 0;
+        }).join(',');
         const imageThumbnail = `https://chart.googleapis.com/chart?${querystring.stringify(params)}`;
         const imageThumbnailShort = yield request.get({
             url: `http://is.gd/create.php?format=simple&format=json&url=${encodeURIComponent(imageThumbnail)}`,
