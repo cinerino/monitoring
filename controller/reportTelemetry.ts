@@ -15,18 +15,52 @@ import mongooseConnectionOptions from '../mongooseConnectionOptions';
 (<any>mongoose).Promise = global.Promise;
 const debug = createDebug('sskts-reportjobs:controller:createTelemetry');
 
-interface ITelemetry {
-    executed_at: Date;
+interface IFlow {
+    transactions: {
+        /**
+         * 集計期間中に開始された取引数
+         */
+        numberOfStarted: number;
+        /**
+         * 集計期間中に成立した取引数
+         */
+        numberOfClosed: number;
+        /**
+         * 集計期間中に期限切れになった取引数
+         */
+        numberOfExpired: number;
+    };
+    queues: {
+        /**
+         * 集計期間中に作成されたキュー数
+         */
+        numberOfCreated: number;
+    };
+    measured_from: Date;
+    measured_to: Date;
+}
+
+/**
+ * ストックデータ
+ *
+ * @interface IStock
+ * @see https://en.wikipedia.org/wiki/Stock_and_flow
+ */
+interface IStock {
+    transactions: {
+        numberOfUnderway: number;
+    };
     queues: {
         numberOfUnexecuted: number;
     };
-    transactions: {
-        numberOfReady: number;
-        numberOfUnderway: number;
-        numberOfClosedWithQueuesUnexported: number;
-        numberOfExpiredWithQueuesUnexported: number;
-    };
+    measured_at: Date;
 }
+
+interface ITelemetry {
+    flow: IFlow;
+    stock: IStock;
+}
+
 export async function main() {
     debug('connecting mongodb...');
     mongoose.connect(process.env.MONGOLAB_URI, mongooseConnectionOptions);
@@ -47,22 +81,22 @@ export async function main() {
     const telemetryAdapter = sskts.adapter.telemetry(mongoose.connection);
     const telemetries = <ITelemetry[]>await telemetryAdapter.telemetryModel.find(
         {
-            executed_at: {
+            'stock.measured_at': {
                 $gt: dateFrom,
                 $lte: dateTo
             }
         }
-    ).sort({ executed_at: 1 }).lean().exec();
+    ).sort({ 'stock.measured_at': 1 }).lean().exec();
     debug('telemetries:', telemetries.length);
 
     mongoose.disconnect();
 
-    await reportNumberOfTransactionsReady(telemetries);
+    await reportNumberOfTransactionsStarted(telemetries);
     await reportNumberOfTransactionsUnderway(telemetries);
     await reportNumberOfTransactionsWithQueuesUnexported(telemetries);
 }
 
-async function reportNumberOfTransactionsReady(telemetries: ITelemetry[]) {
+async function reportNumberOfTransactionsStarted(telemetries: ITelemetry[]) {
     const params = {
         chco: '00A5C6',
         chof: 'png',
@@ -72,18 +106,18 @@ async function reportNumberOfTransactionsReady(telemetries: ITelemetry[]) {
         chd: 't:',
         chls: '5,0,0',
         chxl: '0:|1時間前|50分前|40分前|30分前|20分前|10分前|現在',
-        chdl: '取引在庫',
+        chdl: '開始取引',
         // chdl: '取引在庫|進行取引|未実行キュー',
         chs: '150x50'
     };
-    params.chd += telemetries.map((telemetry) => telemetry.transactions.numberOfReady).join(',');
+    params.chd += telemetries.map((telemetry) => telemetry.flow.transactions.numberOfStarted).join(',');
     const imageThumbnail = `https://chart.googleapis.com/chart?${querystring.stringify(params)}`;
     debug('imageThumbnail:', imageThumbnail);
     params.chs = '750x250';
     const imageFullsize = `https://chart.googleapis.com/chart?${querystring.stringify(params)}`;
 
     await sskts.service.notification.report2developers(
-        '測定データ報告 取引在庫',
+        '測定データ報告 開始取引',
         '',
         imageThumbnail,
         imageFullsize
@@ -103,7 +137,7 @@ async function reportNumberOfTransactionsUnderway(telemetries: ITelemetry[]) {
         chdl: '進行取引',
         chs: '150x50'
     };
-    params.chd += telemetries.map((telemetry) => telemetry.transactions.numberOfUnderway).join(',');
+    params.chd += telemetries.map((telemetry) => telemetry.stock.transactions.numberOfUnderway).join(',');
     const imageThumbnail = `https://chart.googleapis.com/chart?${querystring.stringify(params)}`;
     debug('imageThumbnail:', imageThumbnail);
     params.chs = '750x250';
@@ -119,7 +153,7 @@ async function reportNumberOfTransactionsUnderway(telemetries: ITelemetry[]) {
 
 async function reportNumberOfTransactionsWithQueuesUnexported(telemetries: ITelemetry[]) {
     const params = {
-        chco: 'FFFF42|00A5C6',
+        chco: '00A5C6',
         chof: 'png',
         cht: 'ls',
         chxt: 'x,y',
@@ -127,18 +161,18 @@ async function reportNumberOfTransactionsWithQueuesUnexported(telemetries: ITele
         chd: 't:',
         chls: '5,0,0',
         chxl: '0:|1時間前|50分前|40分前|30分前|20分前|10分前|現在',
-        chdl: '成立キュー|キュー',
+        chdl: 'キュー',
         chs: '150x50'
     };
-    params.chd += telemetries.map((telemetry) => telemetry.transactions.numberOfClosedWithQueuesUnexported).join(',');
-    params.chd += '|' + telemetries.map((telemetry) => telemetry.queues.numberOfUnexecuted).join(',');
+    params.chd += telemetries.map((telemetry) => telemetry.stock.queues.numberOfUnexecuted).join(',');
+    // params.chd += '|' + telemetries.map((telemetry) => telemetry.transactions.numberOfClosedWithQueuesUnexported).join(',');
     const imageThumbnail = `https://chart.googleapis.com/chart?${querystring.stringify(params)}`;
     debug('imageThumbnail:', imageThumbnail);
     params.chs = '750x250';
     const imageFullsize = `https://chart.googleapis.com/chart?${querystring.stringify(params)}`;
 
     await sskts.service.notification.report2developers(
-        '測定データ報告 キュー',
+        '測定データ報告 未実行キュー',
         '',
         imageThumbnail,
         imageFullsize
