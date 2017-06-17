@@ -18,48 +18,26 @@ const debug = createDebug('sskts-reportjobs:controller:createTelemetry');
 
 interface IFlow {
     transactions: {
-        /**
-         * 集計期間中に開始された取引数
-         */
         numberOfStarted: number;
-        /**
-         * 集計期間中に成立した取引数
-         */
         numberOfClosed: number;
-        /**
-         * 集計期間中に期限切れになった取引数
-         */
         numberOfExpired: number;
-        /**
-         * 取引の合計所要時間(ミリ秒)
-         */
         totalRequiredTimeInMilliseconds: number;
-        /**
-         * 取引の最大所要時間(ミリ秒)
-         */
         maxRequiredTimeInMilliseconds: number;
-        /**
-         * 取引の最小所要時間(ミリ秒)
-         */
         minRequiredTimeInMilliseconds: number;
-        /**
-         * 取引の合計金額(yen)
-         */
         totalAmount: number;
-        /**
-         * 取引の合計金額(yen)
-         */
         maxAmount: number;
-        /**
-         * 取引の合計金額(yen)
-         */
         minAmount: number;
     };
     queues: {
-        /**
-         * 集計期間中に作成されたキュー数
-         */
         numberOfCreated: number;
+        numberOfExecuted: number;
+        numberOfAborted: number;
+        totalLatencyInMilliseconds: number;
+        maxLatencyInMilliseconds: number;
+        minLatencyInMilliseconds: number;
+        totalNumberOfTrials: number;
+        maxNumberOfTrials: number;
+        minNumberOfTrials: number;
     };
     measured_from: Date;
     measured_to: Date;
@@ -121,6 +99,63 @@ export async function main() {
     await reportTransactionRequiredTimes(telemetries);
     await reportNumberOfTransactionsUnderway(telemetries);
     await reportNumberOfTransactionsWithQueuesUnexported(telemetries);
+    await reportLatenciesOfQueues(telemetries);
+}
+
+async function reportLatenciesOfQueues(telemetries: ITelemetry[]) {
+    // 互換性維持のため、期待通りのデータのみにフィルター
+    telemetries = telemetries.filter((telemetry) => (telemetry.flow.queues.numberOfExecuted !== undefined));
+
+    const params = {
+        chco: '00FF00,0000FF,FF0000',
+        chof: 'png',
+        cht: 'ls',
+        chxt: 'x,y',
+        chds: 'a',
+        chd: 't:',
+        chls: '2,0,0|2,0,0|2,0,0',
+        chxl: '0:|1時間前|50分前|40分前|30分前|20分前|10分前|現在',
+        chdl: '平均|最大|最小',
+        chs: '150x50'
+    };
+    params.chd += telemetries.map(
+        (telemetry) => {
+            return (telemetry.flow.queues.numberOfExecuted > 0)
+                ? Math.floor(
+                    // tslint:disable-next-line:no-magic-numbers ミリ秒→秒変換
+                    telemetry.flow.queues.totalLatencyInMilliseconds / telemetry.flow.queues.numberOfExecuted / 1000
+                )
+                : 0;
+        }
+    ).join(',');
+    params.chd += '|' + telemetries.map((telemetry) => telemetry.flow.queues.maxLatencyInMilliseconds).join(',');
+    params.chd += '|' + telemetries.map((telemetry) => telemetry.flow.queues.minLatencyInMilliseconds).join(',');
+    const imageThumbnail = `https://chart.googleapis.com/chart?${querystring.stringify(params)}`;
+    const imageThumbnailShort = await request.get({
+        url: `http://is.gd/create.php?format=simple&format=json&url=${encodeURIComponent(imageThumbnail)}`,
+        json: true
+    }).promise().then((body) => {
+        return body.shorturl;
+    });
+    debug('imageThumbnailShort:', imageThumbnailShort);
+
+    params.chs = '750x250';
+    const imageFullsize = `https://chart.googleapis.com/chart?${querystring.stringify(params)}`;
+    debug('imageFullsize:', imageFullsize);
+    const imageFullsizeShort = await request.get({
+        url: `http://is.gd/create.php?format=simple&format=json&url=${encodeURIComponent(imageFullsize)}`,
+        json: true
+    }).promise().then((body) => {
+        return body.shorturl;
+    });
+    debug('imageFullsizeShort:', imageFullsizeShort);
+
+    await sskts.service.notification.report2developers(
+        'キュー待ち時間',
+        '',
+        imageThumbnailShort,
+        imageFullsizeShort
+    )();
 }
 
 async function reportNumberOfTransactionsStarted(telemetries: ITelemetry[]) {

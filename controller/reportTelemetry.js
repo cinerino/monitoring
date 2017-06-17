@@ -52,9 +52,56 @@ function main() {
         yield reportTransactionRequiredTimes(telemetries);
         yield reportNumberOfTransactionsUnderway(telemetries);
         yield reportNumberOfTransactionsWithQueuesUnexported(telemetries);
+        yield reportLatenciesOfQueues(telemetries);
     });
 }
 exports.main = main;
+function reportLatenciesOfQueues(telemetries) {
+    return __awaiter(this, void 0, void 0, function* () {
+        // 互換性維持のため、期待通りのデータのみにフィルター
+        telemetries = telemetries.filter((telemetry) => (telemetry.flow.queues.numberOfExecuted !== undefined));
+        const params = {
+            chco: '00FF00,0000FF,FF0000',
+            chof: 'png',
+            cht: 'ls',
+            chxt: 'x,y',
+            chds: 'a',
+            chd: 't:',
+            chls: '2,0,0|2,0,0|2,0,0',
+            chxl: '0:|1時間前|50分前|40分前|30分前|20分前|10分前|現在',
+            chdl: '平均|最大|最小',
+            chs: '150x50'
+        };
+        params.chd += telemetries.map((telemetry) => {
+            return (telemetry.flow.queues.numberOfExecuted > 0)
+                ? Math.floor(
+                // tslint:disable-next-line:no-magic-numbers ミリ秒→秒変換
+                telemetry.flow.queues.totalLatencyInMilliseconds / telemetry.flow.queues.numberOfExecuted / 1000)
+                : 0;
+        }).join(',');
+        params.chd += '|' + telemetries.map((telemetry) => telemetry.flow.queues.maxLatencyInMilliseconds).join(',');
+        params.chd += '|' + telemetries.map((telemetry) => telemetry.flow.queues.minLatencyInMilliseconds).join(',');
+        const imageThumbnail = `https://chart.googleapis.com/chart?${querystring.stringify(params)}`;
+        const imageThumbnailShort = yield request.get({
+            url: `http://is.gd/create.php?format=simple&format=json&url=${encodeURIComponent(imageThumbnail)}`,
+            json: true
+        }).promise().then((body) => {
+            return body.shorturl;
+        });
+        debug('imageThumbnailShort:', imageThumbnailShort);
+        params.chs = '750x250';
+        const imageFullsize = `https://chart.googleapis.com/chart?${querystring.stringify(params)}`;
+        debug('imageFullsize:', imageFullsize);
+        const imageFullsizeShort = yield request.get({
+            url: `http://is.gd/create.php?format=simple&format=json&url=${encodeURIComponent(imageFullsize)}`,
+            json: true
+        }).promise().then((body) => {
+            return body.shorturl;
+        });
+        debug('imageFullsizeShort:', imageFullsizeShort);
+        yield sskts.service.notification.report2developers('キュー待ち時間', '', imageThumbnailShort, imageFullsizeShort)();
+    });
+}
 function reportNumberOfTransactionsStarted(telemetries) {
     return __awaiter(this, void 0, void 0, function* () {
         const params = {
