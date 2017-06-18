@@ -59,7 +59,7 @@ exports.main = main;
 function reportLatenciesOfQueues(telemetries) {
     return __awaiter(this, void 0, void 0, function* () {
         // 互換性維持のため、期待通りのデータのみにフィルター
-        telemetries = telemetries.filter((telemetry) => (telemetry.flow.queues.numberOfExecuted !== undefined));
+        const datas = telemetries.filter((telemetry) => (telemetry.flow.queues.numberOfExecuted !== undefined));
         const params = {
             chco: '00FF00,0000FF,FF0000',
             chof: 'png',
@@ -72,15 +72,15 @@ function reportLatenciesOfQueues(telemetries) {
             chdl: '平均|最大|最小',
             chs: '150x50'
         };
-        params.chd += telemetries.map((telemetry) => {
+        params.chd += datas.map((telemetry) => {
             return (telemetry.flow.queues.numberOfExecuted > 0)
                 ? Math.floor(
                 // tslint:disable-next-line:no-magic-numbers ミリ秒→秒変換
                 telemetry.flow.queues.totalLatencyInMilliseconds / telemetry.flow.queues.numberOfExecuted / 1000)
                 : 0;
         }).join(',');
-        params.chd += '|' + telemetries.map((telemetry) => telemetry.flow.queues.maxLatencyInMilliseconds).join(',');
-        params.chd += '|' + telemetries.map((telemetry) => telemetry.flow.queues.minLatencyInMilliseconds).join(',');
+        params.chd += '|' + datas.map((telemetry) => telemetry.flow.queues.maxLatencyInMilliseconds).join(',');
+        params.chd += '|' + datas.map((telemetry) => telemetry.flow.queues.minLatencyInMilliseconds).join(',');
         const imageThumbnail = `https://chart.googleapis.com/chart?${querystring.stringify(params)}`;
         const imageThumbnailShort = yield request.get({
             url: `http://is.gd/create.php?format=simple&format=json&url=${encodeURIComponent(imageThumbnail)}`,
@@ -143,7 +143,7 @@ function reportNumberOfTransactionsStarted(telemetries) {
 function reportTransactionRequiredTimes(telemetries) {
     return __awaiter(this, void 0, void 0, function* () {
         // 互換性維持のため、期待通りのデータのみにフィルター
-        telemetries = telemetries.filter((telemetry) => (telemetry.flow.transactions.totalAmount !== undefined));
+        const datas = telemetries.filter((telemetry) => (telemetry.flow.transactions.totalAmount !== undefined));
         const params = {
             chco: '00FF00',
             chof: 'png',
@@ -159,7 +159,7 @@ function reportTransactionRequiredTimes(telemetries) {
             chdl: '所要時間',
             chs: '150x50'
         };
-        params.chd += telemetries.map((telemetry) => {
+        params.chd += datas.map((telemetry) => {
             return (telemetry.flow.transactions.numberOfClosed > 0)
                 ? Math.floor(
                 // tslint:disable-next-line:no-magic-numbers ミリ秒→秒変換
@@ -190,7 +190,7 @@ function reportTransactionRequiredTimes(telemetries) {
 function reportTransactionAmounts(telemetries) {
     return __awaiter(this, void 0, void 0, function* () {
         // 互換性維持のため、期待通りのデータのみにフィルター
-        telemetries = telemetries.filter((telemetry) => (telemetry.flow.transactions.totalAmount !== undefined));
+        const datas = telemetries.filter((telemetry) => (telemetry.flow.transactions.totalAmount !== undefined));
         const params = {
             chco: '00FF00',
             chof: 'png',
@@ -203,7 +203,7 @@ function reportTransactionAmounts(telemetries) {
             chdl: '金額',
             chs: '150x50'
         };
-        params.chd += telemetries.map((telemetry) => {
+        params.chd += datas.map((telemetry) => {
             return (telemetry.flow.transactions.numberOfClosed > 0)
                 ? Math.floor(
                 // tslint:disable-next-line:no-magic-numbers ミリ秒→秒変換

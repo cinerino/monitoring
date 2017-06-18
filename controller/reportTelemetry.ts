@@ -104,7 +104,7 @@ export async function main() {
 
 async function reportLatenciesOfQueues(telemetries: ITelemetry[]) {
     // 互換性維持のため、期待通りのデータのみにフィルター
-    telemetries = telemetries.filter((telemetry) => (telemetry.flow.queues.numberOfExecuted !== undefined));
+    const datas = telemetries.filter((telemetry) => (telemetry.flow.queues.numberOfExecuted !== undefined));
 
     const params = {
         chco: '00FF00,0000FF,FF0000',
@@ -118,7 +118,7 @@ async function reportLatenciesOfQueues(telemetries: ITelemetry[]) {
         chdl: '平均|最大|最小',
         chs: '150x50'
     };
-    params.chd += telemetries.map(
+    params.chd += datas.map(
         (telemetry) => {
             return (telemetry.flow.queues.numberOfExecuted > 0)
                 ? Math.floor(
@@ -128,8 +128,8 @@ async function reportLatenciesOfQueues(telemetries: ITelemetry[]) {
                 : 0;
         }
     ).join(',');
-    params.chd += '|' + telemetries.map((telemetry) => telemetry.flow.queues.maxLatencyInMilliseconds).join(',');
-    params.chd += '|' + telemetries.map((telemetry) => telemetry.flow.queues.minLatencyInMilliseconds).join(',');
+    params.chd += '|' + datas.map((telemetry) => telemetry.flow.queues.maxLatencyInMilliseconds).join(',');
+    params.chd += '|' + datas.map((telemetry) => telemetry.flow.queues.minLatencyInMilliseconds).join(',');
     const imageThumbnail = `https://chart.googleapis.com/chart?${querystring.stringify(params)}`;
     const imageThumbnailShort = await request.get({
         url: `http://is.gd/create.php?format=simple&format=json&url=${encodeURIComponent(imageThumbnail)}`,
@@ -204,7 +204,7 @@ async function reportNumberOfTransactionsStarted(telemetries: ITelemetry[]) {
 
 async function reportTransactionRequiredTimes(telemetries: ITelemetry[]) {
     // 互換性維持のため、期待通りのデータのみにフィルター
-    telemetries = telemetries.filter((telemetry) => (telemetry.flow.transactions.totalAmount !== undefined));
+    const datas = telemetries.filter((telemetry) => (telemetry.flow.transactions.totalAmount !== undefined));
 
     const params = {
         chco: '00FF00',
@@ -221,7 +221,7 @@ async function reportTransactionRequiredTimes(telemetries: ITelemetry[]) {
         chdl: '所要時間',
         chs: '150x50'
     };
-    params.chd += telemetries.map(
+    params.chd += datas.map(
         (telemetry) => {
             return (telemetry.flow.transactions.numberOfClosed > 0)
                 ? Math.floor(
@@ -261,7 +261,7 @@ async function reportTransactionRequiredTimes(telemetries: ITelemetry[]) {
 
 async function reportTransactionAmounts(telemetries: ITelemetry[]) {
     // 互換性維持のため、期待通りのデータのみにフィルター
-    telemetries = telemetries.filter((telemetry) => (telemetry.flow.transactions.totalAmount !== undefined));
+    const datas = telemetries.filter((telemetry) => (telemetry.flow.transactions.totalAmount !== undefined));
 
     const params = {
         chco: '00FF00',
@@ -275,7 +275,7 @@ async function reportTransactionAmounts(telemetries: ITelemetry[]) {
         chdl: '金額',
         chs: '150x50'
     };
-    params.chd += telemetries.map(
+    params.chd += datas.map(
         (telemetry) => {
             return (telemetry.flow.transactions.numberOfClosed > 0)
                 ? Math.floor(
