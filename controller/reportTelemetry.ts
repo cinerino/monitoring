@@ -100,6 +100,7 @@ export async function main() {
     await reportNumberOfTransactionsUnderway(telemetries);
     await reportNumberOfTransactionsWithQueuesUnexported(telemetries);
     await reportLatenciesOfQueues(telemetries);
+    await reportNumberOfTrialsOfQueues(telemetries);
 }
 
 async function reportLatenciesOfQueues(telemetries: ITelemetry[]) {
@@ -124,12 +125,12 @@ async function reportLatenciesOfQueues(telemetries: ITelemetry[]) {
     params.chd += datas.map(
         (telemetry) => {
             return (telemetry.flow.queues.numberOfExecuted > 0)
-                ? Math.floor(telemetry.flow.queues.totalLatencyInMilliseconds / telemetry.flow.queues.numberOfExecuted)
+                ? Math.floor(telemetry.flow.queues.totalLatencyInMilliseconds / telemetry.flow.queues.numberOfExecuted / KILOSECONDS)
                 : 0;
         }
     ).join(',');
-    params.chd += '|' + datas.map((telemetry) => telemetry.flow.queues.maxLatencyInMilliseconds).join(',');
-    params.chd += '|' + datas.map((telemetry) => telemetry.flow.queues.minLatencyInMilliseconds).join(',');
+    params.chd += '|' + datas.map((telemetry) => Math.floor(telemetry.flow.queues.maxLatencyInMilliseconds / KILOSECONDS)).join(',');
+    params.chd += '|' + datas.map((telemetry) => Math.floor(telemetry.flow.queues.minLatencyInMilliseconds / KILOSECONDS)).join(',');
     const imageThumbnail = `https://chart.googleapis.com/chart?${querystring.stringify(params)}`;
 
     params.chs = '750x250';
@@ -138,6 +139,48 @@ async function reportLatenciesOfQueues(telemetries: ITelemetry[]) {
 
     await sskts.service.notification.report2developers(
         'キュー待ち時間',
+        '',
+        await shortenUrl(imageThumbnail),
+        await shortenUrl(imageFullsize)
+    )();
+}
+
+async function reportNumberOfTrialsOfQueues(telemetries: ITelemetry[]) {
+    // 互換性維持のため、期待通りのデータのみにフィルター
+    const datas = telemetries.filter((telemetry) => (telemetry.flow.queues.numberOfExecuted !== undefined));
+    datas.forEach((data) => {
+        debug('data.flow', data.flow);
+    });
+
+    const params = {
+        chco: '00FF00,0000FF,FF0000',
+        chof: 'png',
+        cht: 'ls',
+        chxt: 'x,y',
+        chds: 'a',
+        chd: 't:',
+        chls: '2,0,0|2,0,0|2,0,0',
+        chxl: '0:|1時間前|50分前|40分前|30分前|20分前|10分前|現在',
+        chdl: '平均|最大|最小',
+        chs: '150x50'
+    };
+    params.chd += datas.map(
+        (telemetry) => {
+            return (telemetry.flow.queues.numberOfExecuted > 0)
+                ? Math.floor(telemetry.flow.queues.totalNumberOfTrials / telemetry.flow.queues.numberOfExecuted)
+                : 0;
+        }
+    ).join(',');
+    params.chd += '|' + datas.map((telemetry) => telemetry.flow.queues.maxNumberOfTrials).join(',');
+    params.chd += '|' + datas.map((telemetry) => telemetry.flow.queues.minNumberOfTrials).join(',');
+    const imageThumbnail = `https://chart.googleapis.com/chart?${querystring.stringify(params)}`;
+
+    params.chs = '750x250';
+    const imageFullsize = `https://chart.googleapis.com/chart?${querystring.stringify(params)}`;
+    debug('imageFullsize:', imageFullsize);
+
+    await sskts.service.notification.report2developers(
+        'キュー実行試行回数',
         '',
         await shortenUrl(imageThumbnail),
         await shortenUrl(imageFullsize)
@@ -316,4 +359,4 @@ async function shortenUrl(originalUrl: string): Promise<string> {
     }).promise().then((body) => {
         return <string>body.shorturl;
     });
-};
+}
