@@ -5,16 +5,26 @@
  */
 
 import * as sskts from '@motionpicture/sskts-domain';
+import * as azureStorage from 'azure-storage';
 import * as createDebug from 'debug';
 import * as moment from 'moment';
 import * as mongoose from 'mongoose';
-import * as querystring from 'querystring';
 import * as request from 'request-promise-native';
 
 import mongooseConnectionOptions from '../mongooseConnectionOptions';
 
 (<any>mongoose).Promise = global.Promise;
 const debug = createDebug('sskts-reportjobs:controller:reportGMOSales');
+const defaultParams = {
+    chco: 'DAA8F5',
+    chf: 'bg,s,283037',
+    chof: 'png',
+    cht: 'ls',
+    chds: 'a',
+    chdls: 'a1a6a9,12',
+    chls: '1,0,0|1,0,0|1,0,0',
+    chxs: '0,a1a6a9,12|1,a1a6a9,12|2,a1a6a9,12'
+};
 
 export async function main() {
     mongoose.connect(process.env.MONGOLAB_URI, mongooseConnectionOptions);
@@ -83,18 +93,17 @@ async function reportScatterChartInAmountAndTranDate() {
     debug('sizeMax:', sizeMax);
 
     const params = {
-        chof: 'png',
-        cht: 's',
-        chxt: 'x,x,y,y',
-        chds: `0,24,0,${Math.floor(maxAmount / AMOUNT_UNIT) + 1}`,
-        chxl: '1:|時台|3:|千円台',
-        // tslint:disable-next-line:no-magic-numbers
-        chxr: `0,0,24,1|2,0,${Math.floor(maxAmount / AMOUNT_UNIT) + 1}`,
-        chg: '100,100',
-        chd: 't:',
-        chls: '5,0,0',
-        // chdl: '金額',
-        chs: '200x100'
+        ...defaultParams, ...{
+            cht: 's',
+            chco: '3399FF',
+            chxt: 'x,x,y,y',
+            chds: `0,24,0,${Math.floor(maxAmount / AMOUNT_UNIT) + 1}`,
+            chd: 't:',
+            chxl: '1:|時台|3:|千円台',
+            chxr: `0,0,24,1|2,0,${Math.floor(maxAmount / AMOUNT_UNIT) + 1}`,
+            chg: '100,100',
+            chs: '800x300'
+        }
     };
     params.chd += Object.keys(prots).map((key) => prots[key].x).join(',');
     params.chd += '|' + Object.keys(prots).map((key) => prots[key].y).join(',');
@@ -102,29 +111,14 @@ async function reportScatterChartInAmountAndTranDate() {
     params.chd += '|' + Object.keys(prots).map((key) => Math.floor(prots[key].size / sizeMax * 50)).join(',');
     // params.chd += gmoNotifications.map((gmoNotification) => Number(gmoNotification.tran_date.slice(8, 10))).join(',');
     // params.chd += '|' + gmoNotifications.map((gmoNotification) => Math.floor(gmoNotification.amount / 100)).join(',');
-
-    debug('params:', params);
-    const imageThumbnail = `https://chart.googleapis.com/chart?${querystring.stringify(params)}`;
-    let body = await request.get({
-        url: `http://is.gd/create.php?format=simple&format=json&url=${encodeURIComponent(imageThumbnail)}`,
-        json: true
-    }).promise();
-    const imageThumbnailShort = body.shorturl;
-    params.chs = '800x300';
-    const imageFullsize = `https://chart.googleapis.com/chart?${querystring.stringify(params)}`;
-    body = await request.get({
-        url: `http://is.gd/create.php?format=simple&format=json&url=${encodeURIComponent(imageFullsize)}`,
-        json: true
-    }).promise();
-    const imageFullsizeShort = body.shorturl;
-    debug('imageFullsizeShort:', imageFullsizeShort);
+    const imageFullsize = await publishUrl(params);
 
     await sskts.service.notification.report2developers(
         `GMO売上散布図
 ${dateFrom.format('MM/DD HH:mm:ss')}-${dateTo.format('MM/DD HH:mm:ss')}`,
         `サンプル数:${gmoNotifications.length}`,
-        imageThumbnailShort,
-        imageFullsizeShort
+        imageFullsize,
+        imageFullsize
     )();
 }
 
@@ -162,24 +156,19 @@ async function reportGMOSalesAggregations() {
 
     const AMOUNT_UNIT = 100;
     const params = {
-        chof: 'png',
-        cht: 'ls',
-        chxt: 'x,y,y',
-        // chds: '0,400',
-        chds: 'a',
-        chxl: '0:|24時間前|18時間前|12時間前|6時間前|0時間前|2:|百円',
-        // chxr: `1,0,400`,
-        chg: '25,10',
-        chd: 't:',
-        chls: '5,0,0',
-        // chdl: '金額',
-        chs: '300x100'
+        ...defaultParams, ...{
+            cht: 'ls',
+            chco: '3399FF',
+            chxt: 'x,y,y',
+            chds: 'a',
+            chd: 't:',
+            chxl: '0:|24時間前|18時間前|12時間前|6時間前|0時間前|2:|百円',
+            chg: '25,10',
+            chs: '750x250'
+        }
     };
     params.chd += aggregations.map((agrgegation) => Math.floor(agrgegation.totalAmount / AMOUNT_UNIT)).join(',');
-    const imageThumbnail = `https://chart.googleapis.com/chart?${querystring.stringify(params)}`;
-    debug('imageThumbnail:', imageThumbnail);
-    params.chs = '750x250';
-    const imageFullsize = `https://chart.googleapis.com/chart?${querystring.stringify(params)}`;
+    const imageFullsize = await publishUrl(params);
 
     const lastAggregation = aggregations[aggregations.length - 1];
 
@@ -187,7 +176,67 @@ async function reportGMOSalesAggregations() {
         `GMO売上金額遷移(15分単位)
 ${moment(aggregations[0].dateFrom).format('MM/DD HH:mm:ss')}-${moment(lastAggregation.dateTo).format('MM/DD HH:mm:ss')}`,
         '',
-        imageThumbnail,
+        imageFullsize,
         imageFullsize
     )();
+}
+
+async function publishUrl(params: any) {
+    return new Promise<string>(async (resolve, reject) => {
+        // google chart apiで画像生成
+        const body = <string>await request.post({
+            url: 'https://chart.googleapis.com/chart',
+            form: params,
+            encoding: 'binary'
+        }).then();
+        const buffer = new Buffer(body, 'binary');
+        debug('creating block blob... buffer.length:', buffer.length);
+
+        // save to blob
+        const blobService = azureStorage.createBlobService();
+        const CONTAINER = 'telemetry-images';
+        blobService.createContainerIfNotExists(
+            CONTAINER,
+            {
+                // publicAccessLevel: 'blob'
+            },
+            (createContainerError) => {
+                if (createContainerError instanceof Error) {
+                    reject(createContainerError);
+
+                    return;
+                }
+
+                const blob = `sskts-monitoring-jobs-telemetry-images-${moment().format('YYYYMMDDHHmmssSSS')}.png`;
+                blobService.createBlockBlobFromText(
+                    CONTAINER, blob, buffer, {
+                        contentSettings: {
+                            contentType: 'image/png'
+                        }
+                    },
+                    (createBlockBlobError, result, response) => {
+                        debug(createBlockBlobError, result, response);
+                        if (createBlockBlobError instanceof Error) {
+                            reject(createBlockBlobError);
+
+                            return;
+                        }
+
+                        // 期限つきのURLを発行する
+                        const sharedAccessPolicy = {
+                            AccessPolicy: {
+                                Permissions: azureStorage.BlobUtilities.SharedAccessPermissions.READ,
+                                // tslint:disable-next-line:no-magic-numbers
+                                Start: moment().add(-10, 'minutes').toDate(),
+                                // tslint:disable-next-line:no-magic-numbers
+                                Expiry: moment().add(60, 'minutes').toDate()
+                            }
+                        };
+                        const token = blobService.generateSharedAccessSignature(result.container, result.name, sharedAccessPolicy);
+                        resolve(blobService.getUrl(result.container, result.name, token));
+                    }
+                );
+            }
+        );
+    });
 }
