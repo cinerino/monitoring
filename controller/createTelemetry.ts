@@ -15,7 +15,7 @@ const debug = createDebug('sskts-reportjobs:controller:createTelemetry');
 
 export async function main() {
     debug('connecting mongodb...');
-    mongoose.connect(process.env.MONGOLAB_URI, mongooseConnectionOptions);
+    mongoose.connect(<string>process.env.MONGOLAB_URI, mongooseConnectionOptions);
 
     const queueAdapter = sskts.adapter.queue(mongoose.connection);
     const telemetryAdapter = sskts.adapter.telemetry(mongoose.connection);

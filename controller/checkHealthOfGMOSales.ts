@@ -19,7 +19,7 @@ const debug = createDebug('sskts-reportjobs:controller:checkHealthOfGMOSales');
 const AGGREGATION_UNIT_TIME_IN_SECONDS = 86400;
 
 export async function main() {
-    mongoose.connect(process.env.MONGOLAB_URI, mongooseConnectionOptions);
+    mongoose.connect(<string>process.env.MONGOLAB_URI, mongooseConnectionOptions);
     const gmoNotificationAdapter = sskts.adapter.gmoNotification(mongoose.connection);
     const transactionAdapter = sskts.adapter.transaction(mongoose.connection);
 

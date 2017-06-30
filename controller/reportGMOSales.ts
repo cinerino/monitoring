@@ -27,7 +27,7 @@ const defaultParams = {
 };
 
 export async function main() {
-    mongoose.connect(process.env.MONGOLAB_URI, mongooseConnectionOptions);
+    mongoose.connect(<string>process.env.MONGOLAB_URI, mongooseConnectionOptions);
 
     await reportGMOSalesAggregations();
     await reportScatterChartInAmountAndTranDate();

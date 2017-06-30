@@ -78,7 +78,7 @@ interface ITelemetry {
 // tslint:disable-next-line:max-func-body-length
 export async function main() {
     debug('connecting mongodb...');
-    mongoose.connect(process.env.MONGOLAB_URI, mongooseConnectionOptions);
+    mongoose.connect(<string>process.env.MONGOLAB_URI, mongooseConnectionOptions);
 
     // 集計単位数分の集計を行う
     const telemetryUnitTimeInSeconds = 60; // 集計単位時間(秒)
