@@ -84,13 +84,17 @@ async function reportNumberOfTrialsOfQueues(telemetries: ITelemetry[]) {
     };
     params.chd += telemetries.map(
         (telemetry) => {
-            return (telemetry.flow.tasks.numberOfExecuted > 0)
+            return (telemetry.flow.tasks !== undefined && telemetry.flow.tasks.numberOfExecuted > 0)
                 ? Math.floor(telemetry.flow.tasks.totalNumberOfTrials / telemetry.flow.tasks.numberOfExecuted)
                 : 0;
         }
     ).join(',');
-    params.chd += '|' + telemetries.map((telemetry) => telemetry.flow.tasks.maxNumberOfTrials).join(',');
-    params.chd += '|' + telemetries.map((telemetry) => telemetry.flow.tasks.minNumberOfTrials).join(',');
+    params.chd += '|' + telemetries.map(
+        (telemetry) => (telemetry.flow.tasks !== undefined) ? telemetry.flow.tasks.maxNumberOfTrials : 0
+    ).join(',');
+    params.chd += '|' + telemetries.map(
+        (telemetry) => (telemetry.flow.tasks !== undefined) ? telemetry.flow.tasks.minNumberOfTrials : 0
+    ).join(',');
     const imageFullsize = await publishUrl(params);
     debug('imageFullsize:', imageFullsize);
 
@@ -115,13 +119,17 @@ async function reportLatenciesOfQueues(telemetries: ITelemetry[]) {
     };
     params.chd += telemetries.map(
         (telemetry) => {
-            return (telemetry.flow.tasks.numberOfExecuted > 0)
+            return (telemetry.flow.tasks !== undefined && telemetry.flow.tasks.numberOfExecuted > 0)
                 ? Math.floor(telemetry.flow.tasks.totalLatencyInMilliseconds / telemetry.flow.tasks.numberOfExecuted / KILOSECONDS)
                 : 0;
         }
     ).join(',');
-    params.chd += '|' + telemetries.map((telemetry) => Math.floor(telemetry.flow.tasks.maxLatencyInMilliseconds / KILOSECONDS)).join(',');
-    params.chd += '|' + telemetries.map((telemetry) => Math.floor(telemetry.flow.tasks.minLatencyInMilliseconds / KILOSECONDS)).join(',');
+    params.chd += '|' + telemetries.map(
+        (telemetry) => (telemetry.flow.tasks !== undefined) ? Math.floor(telemetry.flow.tasks.maxLatencyInMilliseconds / KILOSECONDS) : 0
+    ).join(',');
+    params.chd += '|' + telemetries.map(
+        (telemetry) => (telemetry.flow.tasks !== undefined) ? Math.floor(telemetry.flow.tasks.minLatencyInMilliseconds / KILOSECONDS) : 0
+    ).join(',');
     const imageFullsize = await publishUrl(params);
     debug('imageFullsize:', imageFullsize);
 
@@ -254,7 +262,9 @@ async function reportNumberOfTransactionsWithQueuesUnexported(telemetries: ITele
             chs: '750x250'
         }
     };
-    params.chd += telemetries.map((telemetry) => telemetry.stock.tasks.numberOfUnexecuted).join(',');
+    params.chd += telemetries.map(
+        (telemetry) => (telemetry.stock.tasks !== undefined) ? telemetry.stock.tasks.numberOfUnexecuted : 0
+    ).join(',');
     const imageFullsize = await publishUrl(params);
 
     await sskts.service.notification.report2developers(
