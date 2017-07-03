@@ -9,7 +9,7 @@
     }
   ],
   "dependencies": {
-    "@motionpicture/sskts-domain": "^19.6.1",
+    "@motionpicture/sskts-domain": "^20.0.1",
     "azure-storage": "^2.1.0",
     "debug": "^2.6.8",
     "moment": "^2.18.1",

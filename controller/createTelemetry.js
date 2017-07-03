@@ -23,12 +23,12 @@ function main() {
     return __awaiter(this, void 0, void 0, function* () {
         debug('connecting mongodb...');
         mongoose.connect(process.env.MONGOLAB_URI, mongooseConnectionOptions_1.default);
-        const queueAdapter = sskts.adapter.queue(mongoose.connection);
+        const taskAdapter = sskts.adapter.task(mongoose.connection);
         const telemetryAdapter = sskts.adapter.telemetry(mongoose.connection);
         const transactionAdapter = sskts.adapter.transaction(mongoose.connection);
         debug('creating telemetry...');
         // todo 一時的に固定値で算出
-        yield sskts.service.report.createTelemetry()(queueAdapter, telemetryAdapter, transactionAdapter);
+        yield sskts.service.report.createTelemetry()(taskAdapter, telemetryAdapter, transactionAdapter);
         mongoose.disconnect();
     });
 }
