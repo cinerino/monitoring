@@ -82,15 +82,15 @@ function reportNumberOfTrialsOfQueues(telemetries) {
             chs: '750x250'
         });
         params.chd += telemetries.map((telemetry) => {
-            return (telemetry.flow.queues.numberOfExecuted > 0)
-                ? Math.floor(telemetry.flow.queues.totalNumberOfTrials / telemetry.flow.queues.numberOfExecuted)
+            return (telemetry.flow.tasks.numberOfExecuted > 0)
+                ? Math.floor(telemetry.flow.tasks.totalNumberOfTrials / telemetry.flow.tasks.numberOfExecuted)
                 : 0;
         }).join(',');
-        params.chd += '|' + telemetries.map((telemetry) => telemetry.flow.queues.maxNumberOfTrials).join(',');
-        params.chd += '|' + telemetries.map((telemetry) => telemetry.flow.queues.minNumberOfTrials).join(',');
+        params.chd += '|' + telemetries.map((telemetry) => telemetry.flow.tasks.maxNumberOfTrials).join(',');
+        params.chd += '|' + telemetries.map((telemetry) => telemetry.flow.tasks.minNumberOfTrials).join(',');
         const imageFullsize = yield publishUrl(params);
         debug('imageFullsize:', imageFullsize);
-        yield sskts.service.notification.report2developers('キュー実行試行回数', '', imageFullsize, imageFullsize)();
+        yield sskts.service.notification.report2developers('タスク実行試行回数', '', imageFullsize, imageFullsize)();
     });
 }
 function reportLatenciesOfQueues(telemetries) {
@@ -104,15 +104,15 @@ function reportLatenciesOfQueues(telemetries) {
             chs: '750x250'
         });
         params.chd += telemetries.map((telemetry) => {
-            return (telemetry.flow.queues.numberOfExecuted > 0)
-                ? Math.floor(telemetry.flow.queues.totalLatencyInMilliseconds / telemetry.flow.queues.numberOfExecuted / KILOSECONDS)
+            return (telemetry.flow.tasks.numberOfExecuted > 0)
+                ? Math.floor(telemetry.flow.tasks.totalLatencyInMilliseconds / telemetry.flow.tasks.numberOfExecuted / KILOSECONDS)
                 : 0;
         }).join(',');
-        params.chd += '|' + telemetries.map((telemetry) => Math.floor(telemetry.flow.queues.maxLatencyInMilliseconds / KILOSECONDS)).join(',');
-        params.chd += '|' + telemetries.map((telemetry) => Math.floor(telemetry.flow.queues.minLatencyInMilliseconds / KILOSECONDS)).join(',');
+        params.chd += '|' + telemetries.map((telemetry) => Math.floor(telemetry.flow.tasks.maxLatencyInMilliseconds / KILOSECONDS)).join(',');
+        params.chd += '|' + telemetries.map((telemetry) => Math.floor(telemetry.flow.tasks.minLatencyInMilliseconds / KILOSECONDS)).join(',');
         const imageFullsize = yield publishUrl(params);
         debug('imageFullsize:', imageFullsize);
-        yield sskts.service.notification.report2developers('キュー待ち時間', '', imageFullsize, imageFullsize)();
+        yield sskts.service.notification.report2developers('タスク待ち時間', '', imageFullsize, imageFullsize)();
     });
 }
 function reportNumberOfTransactionsByStatuses(telemetries) {
@@ -197,12 +197,12 @@ function reportNumberOfTransactionsWithQueuesUnexported(telemetries) {
             chxt: 'x,y',
             chd: 't:',
             chxl: '0:|12時間前|9時間前|6時間前|3時間前|0時間前',
-            chdl: 'キュー',
+            chdl: 'タスク',
             chs: '750x250'
         });
-        params.chd += telemetries.map((telemetry) => telemetry.stock.queues.numberOfUnexecuted).join(',');
+        params.chd += telemetries.map((telemetry) => telemetry.stock.tasks.numberOfUnexecuted).join(',');
         const imageFullsize = yield publishUrl(params);
-        yield sskts.service.notification.report2developers('時点でのキュー数', '', imageFullsize, imageFullsize)();
+        yield sskts.service.notification.report2developers('時点でのタスク数', '', imageFullsize, imageFullsize)();
     });
 }
 /**

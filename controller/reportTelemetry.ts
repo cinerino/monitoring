@@ -27,53 +27,7 @@ const defaultParams = {
     chxs: '0,a1a6a9,12|1,a1a6a9,12|2,a1a6a9,12'
 };
 
-interface IFlow {
-    transactions: {
-        numberOfStarted: number;
-        numberOfClosed: number;
-        numberOfExpired: number;
-        totalRequiredTimeInMilliseconds: number;
-        maxRequiredTimeInMilliseconds: number;
-        minRequiredTimeInMilliseconds: number;
-        totalAmount: number;
-        maxAmount: number;
-        minAmount: number;
-    };
-    queues: {
-        numberOfCreated: number;
-        numberOfExecuted: number;
-        numberOfAborted: number;
-        totalLatencyInMilliseconds: number;
-        maxLatencyInMilliseconds: number;
-        minLatencyInMilliseconds: number;
-        totalNumberOfTrials: number;
-        maxNumberOfTrials: number;
-        minNumberOfTrials: number;
-    };
-    measured_from: Date;
-    measured_to: Date;
-}
-
-/**
- * ストックデータ
- *
- * @interface IStock
- * @see https://en.wikipedia.org/wiki/Stock_and_flow
- */
-interface IStock {
-    transactions: {
-        numberOfUnderway: number;
-    };
-    queues: {
-        numberOfUnexecuted: number;
-    };
-    measured_at: Date;
-}
-
-interface ITelemetry {
-    flow: IFlow;
-    stock: IStock;
-}
+type ITelemetry = sskts.service.report.ITelemetry;
 
 // tslint:disable-next-line:max-func-body-length
 export async function main() {
@@ -130,18 +84,18 @@ async function reportNumberOfTrialsOfQueues(telemetries: ITelemetry[]) {
     };
     params.chd += telemetries.map(
         (telemetry) => {
-            return (telemetry.flow.queues.numberOfExecuted > 0)
-                ? Math.floor(telemetry.flow.queues.totalNumberOfTrials / telemetry.flow.queues.numberOfExecuted)
+            return (telemetry.flow.tasks.numberOfExecuted > 0)
+                ? Math.floor(telemetry.flow.tasks.totalNumberOfTrials / telemetry.flow.tasks.numberOfExecuted)
                 : 0;
         }
     ).join(',');
-    params.chd += '|' + telemetries.map((telemetry) => telemetry.flow.queues.maxNumberOfTrials).join(',');
-    params.chd += '|' + telemetries.map((telemetry) => telemetry.flow.queues.minNumberOfTrials).join(',');
+    params.chd += '|' + telemetries.map((telemetry) => telemetry.flow.tasks.maxNumberOfTrials).join(',');
+    params.chd += '|' + telemetries.map((telemetry) => telemetry.flow.tasks.minNumberOfTrials).join(',');
     const imageFullsize = await publishUrl(params);
     debug('imageFullsize:', imageFullsize);
 
     await sskts.service.notification.report2developers(
-        'キュー実行試行回数',
+        'タスク実行試行回数',
         '',
         imageFullsize,
         imageFullsize
@@ -161,18 +115,18 @@ async function reportLatenciesOfQueues(telemetries: ITelemetry[]) {
     };
     params.chd += telemetries.map(
         (telemetry) => {
-            return (telemetry.flow.queues.numberOfExecuted > 0)
-                ? Math.floor(telemetry.flow.queues.totalLatencyInMilliseconds / telemetry.flow.queues.numberOfExecuted / KILOSECONDS)
+            return (telemetry.flow.tasks.numberOfExecuted > 0)
+                ? Math.floor(telemetry.flow.tasks.totalLatencyInMilliseconds / telemetry.flow.tasks.numberOfExecuted / KILOSECONDS)
                 : 0;
         }
     ).join(',');
-    params.chd += '|' + telemetries.map((telemetry) => Math.floor(telemetry.flow.queues.maxLatencyInMilliseconds / KILOSECONDS)).join(',');
-    params.chd += '|' + telemetries.map((telemetry) => Math.floor(telemetry.flow.queues.minLatencyInMilliseconds / KILOSECONDS)).join(',');
+    params.chd += '|' + telemetries.map((telemetry) => Math.floor(telemetry.flow.tasks.maxLatencyInMilliseconds / KILOSECONDS)).join(',');
+    params.chd += '|' + telemetries.map((telemetry) => Math.floor(telemetry.flow.tasks.minLatencyInMilliseconds / KILOSECONDS)).join(',');
     const imageFullsize = await publishUrl(params);
     debug('imageFullsize:', imageFullsize);
 
     await sskts.service.notification.report2developers(
-        'キュー待ち時間',
+        'タスク待ち時間',
         '',
         imageFullsize,
         imageFullsize
@@ -296,15 +250,15 @@ async function reportNumberOfTransactionsWithQueuesUnexported(telemetries: ITele
             chxt: 'x,y',
             chd: 't:',
             chxl: '0:|12時間前|9時間前|6時間前|3時間前|0時間前',
-            chdl: 'キュー',
+            chdl: 'タスク',
             chs: '750x250'
         }
     };
-    params.chd += telemetries.map((telemetry) => telemetry.stock.queues.numberOfUnexecuted).join(',');
+    params.chd += telemetries.map((telemetry) => telemetry.stock.tasks.numberOfUnexecuted).join(',');
     const imageFullsize = await publishUrl(params);
 
     await sskts.service.notification.report2developers(
-        '時点でのキュー数',
+        '時点でのタスク数',
         '',
         imageFullsize,
         imageFullsize
