@@ -21,39 +21,76 @@ const AGGREGATION_UNIT_TIME_IN_SECONDS = 86400;
 export async function main() {
     mongoose.connect(<string>process.env.MONGOLAB_URI, mongooseConnectionOptions);
     const gmoNotificationAdapter = sskts.adapter.gmoNotification(mongoose.connection);
-    const transactionAdapter = sskts.adapter.transaction(mongoose.connection);
+    // const transactionAdapter = sskts.adapter.transaction(mongoose.connection);
 
     const dateNow = moment();
     // tslint:disable-next-line:no-magic-numbers
     const dateTo = moment((dateNow.unix() - dateNow.unix() % 3600) * 1000).toDate();
     // tslint:disable-next-line:no-magic-numbers
     const dateFrom = moment(dateTo).add(-AGGREGATION_UNIT_TIME_IN_SECONDS, 'seconds').toDate();
-    const gmoSales = await sskts.service.report.searchGMOSales(dateFrom, dateTo)(gmoNotificationAdapter);
+    const gmoSaleses = await sskts.service.report.searchGMOSales(dateFrom, dateTo)(gmoNotificationAdapter);
     debug(dateFrom.toISOString(), dateTo.toISOString());
-    const totalAmount = gmoSales.reduce((a, b) => a + parseInt(b.amount, 10), 0);
+    // tslint:disable-next-line:no-magic-numbers
+    const totalAmount = gmoSaleses.reduce((a, b) => a + parseInt(b.amount, 10), 0);
 
-    // オーダーIDごとに有効性確認
+    // オーダーIDごとに有効性確認すると、コマンド過多でMongoDBにある程度の負荷をかけてしまう
+    // まとめて検索してから、ローカルで有効性を確認する必要がある
+    const orderIds = gmoSaleses.map((gmoSales) => gmoSales.order_id);
+    const tasks = <any[]>await sskts.adapter.task(mongoose.connection).taskModel.find(
+        {
+            name: sskts.factory.taskName.SettleGMOAuthorization,
+            'data.authorization.gmo_order_id': { $in: orderIds }
+        }
+    ).lean().exec();
+    debug('tasks are', tasks);
+
     const errors: {
         title: string;
         detail: string;
     }[] = [];
-    await Promise.all(gmoSales.map(async (gmoSale) => {
+    gmoSaleses.forEach((gmoSales) => {
         try {
-            await sskts.service.report.examineGMOSales(gmoSale)(transactionAdapter);
+            const taskByOrderId = tasks.find((task) => task.data.authorization.gmo_order_id === gmoSales.order_id);
+            if (taskByOrderId === undefined) {
+                throw new Error('task not found');
+            }
+
+            const authorization = <sskts.factory.authorization.gmo.IAuthorization>taskByOrderId.data.authorization;
+            debug('authorization is', authorization);
+            if (authorization.gmo_access_id !== gmoSales.access_id) {
+                throw new Error('gmo_access_id not matched');
+            }
+
+            if (authorization.gmo_pay_type !== gmoSales.pay_type) {
+                throw new Error('gmo_pay_type not matched');
+            }
+
+            // オーソリの金額と同一かどうか
+            // tslint:disable-next-line:no-magic-numbers
+            if (authorization.gmo_amount !== parseInt(gmoSales.amount, 10)) {
+                throw new Error('amount not matched');
+            }
         } catch (error) {
             errors.push({
-                title: `${gmoSale.order_id} invalid`,
+                title: `${gmoSales.order_id} invalid`,
                 detail: error.message
             });
         }
-    }));
+    });
 
     mongoose.disconnect();
 
+    let result = `healthy: ${gmoSaleses.length - errors.length}/${gmoSaleses.length}
+unhealthy: ${errors.length}/${gmoSaleses.length}`;
+    if (errors.length > 0) {
+        result += `
+${errors.map((error) => `#${error.title}\n${error.detail}`).join('\n')}`
+            ;
+    }
     await sskts.service.notification.report2developers(
-        `GMO実売上健康診断結果\n${moment(dateFrom).format('MM/DD HH:mm:ss')}-${moment(dateTo).format('MM/DD HH:mm:ss')}`,
-        `取引数:${gmoSales.length}
-合計金額:￥${totalAmount}
-${(errors.length > 0) ? errors.map((error) => `#${error.title}\n${error.detail}`).join('\n') : 'healthy'}`
+        'GMO売上健康診断',
+        `${moment(dateFrom).format('M/D H:mm')}-${moment(dateTo).format('M/D H:mm')}
+￥${totalAmount}
+${result}`
     )();
 }

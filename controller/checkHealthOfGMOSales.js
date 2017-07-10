@@ -28,32 +28,62 @@ function main() {
     return __awaiter(this, void 0, void 0, function* () {
         mongoose.connect(process.env.MONGOLAB_URI, mongooseConnectionOptions_1.default);
         const gmoNotificationAdapter = sskts.adapter.gmoNotification(mongoose.connection);
-        const transactionAdapter = sskts.adapter.transaction(mongoose.connection);
+        // const transactionAdapter = sskts.adapter.transaction(mongoose.connection);
         const dateNow = moment();
         // tslint:disable-next-line:no-magic-numbers
         const dateTo = moment((dateNow.unix() - dateNow.unix() % 3600) * 1000).toDate();
         // tslint:disable-next-line:no-magic-numbers
         const dateFrom = moment(dateTo).add(-AGGREGATION_UNIT_TIME_IN_SECONDS, 'seconds').toDate();
-        const gmoSales = yield sskts.service.report.searchGMOSales(dateFrom, dateTo)(gmoNotificationAdapter);
+        const gmoSaleses = yield sskts.service.report.searchGMOSales(dateFrom, dateTo)(gmoNotificationAdapter);
         debug(dateFrom.toISOString(), dateTo.toISOString());
-        const totalAmount = gmoSales.reduce((a, b) => a + parseInt(b.amount, 10), 0);
-        // オーダーIDごとに有効性確認
+        // tslint:disable-next-line:no-magic-numbers
+        const totalAmount = gmoSaleses.reduce((a, b) => a + parseInt(b.amount, 10), 0);
+        // オーダーIDごとに有効性確認すると、コマンド過多でMongoDBにある程度の負荷をかけてしまう
+        // まとめて検索してから、ローカルで有効性を確認する必要がある
+        const orderIds = gmoSaleses.map((gmoSales) => gmoSales.order_id);
+        const tasks = yield sskts.adapter.task(mongoose.connection).taskModel.find({
+            name: sskts.factory.taskName.SettleGMOAuthorization,
+            'data.authorization.gmo_order_id': { $in: orderIds }
+        }).lean().exec();
+        debug('tasks are', tasks);
         const errors = [];
-        yield Promise.all(gmoSales.map((gmoSale) => __awaiter(this, void 0, void 0, function* () {
+        gmoSaleses.forEach((gmoSales) => {
             try {
-                yield sskts.service.report.examineGMOSales(gmoSale)(transactionAdapter);
+                const taskByOrderId = tasks.find((task) => task.data.authorization.gmo_order_id === gmoSales.order_id);
+                if (taskByOrderId === undefined) {
+                    throw new Error('task not found');
+                }
+                const authorization = taskByOrderId.data.authorization;
+                debug('authorization is', authorization);
+                if (authorization.gmo_access_id !== gmoSales.access_id) {
+                    throw new Error('gmo_access_id not matched');
+                }
+                if (authorization.gmo_pay_type !== gmoSales.pay_type) {
+                    throw new Error('gmo_pay_type not matched');
+                }
+                // オーソリの金額と同一かどうか
+                // tslint:disable-next-line:no-magic-numbers
+                if (authorization.gmo_amount !== parseInt(gmoSales.amount, 10)) {
+                    throw new Error('amount not matched');
+                }
             }
             catch (error) {
                 errors.push({
-                    title: `${gmoSale.order_id} invalid`,
+                    title: `${gmoSales.order_id} invalid`,
                     detail: error.message
                 });
             }
-        })));
+        });
         mongoose.disconnect();
-        yield sskts.service.notification.report2developers(`GMO実売上健康診断結果\n${moment(dateFrom).format('MM/DD HH:mm:ss')}-${moment(dateTo).format('MM/DD HH:mm:ss')}`, `取引数:${gmoSales.length}
-合計金額:￥${totalAmount}
-${(errors.length > 0) ? errors.map((error) => `#${error.title}\n${error.detail}`).join('\n') : 'healthy'}`)();
+        let result = `healthy: ${gmoSaleses.length - errors.length}/${gmoSaleses.length}
+unhealthy: ${errors.length}/${gmoSaleses.length}`;
+        if (errors.length > 0) {
+            result += `
+${errors.map((error) => `#${error.title}\n${error.detail}`).join('\n')}`;
+        }
+        yield sskts.service.notification.report2developers('GMO売上健康診断', `${moment(dateFrom).format('M/D H:mm')}-${moment(dateTo).format('M/D H:mm')}
+￥${totalAmount}
+${result}`)();
     });
 }
 exports.main = main;
