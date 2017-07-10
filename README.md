@@ -6,8 +6,6 @@
 
 ## インフラ
 基本的にnode.jsのウェブアプリケーション。
-ウェブサーバーとしては、AzureのWebApps or GCPのAppEngine or AWSのelastic beanstalkを想定。
-全てで動くように開発していくことが望ましい。
 
 ## 言語
 実態としては、linuxあるいはwindows上でのnode.js。
@@ -41,9 +39,7 @@ set COA_ENDPOINT=**********coa apiのエンドポイント**********
 set COA_REFRESH_TOKEN=**********coa apiのリフレッシュトークン**********
 set SSKTS_DEVELOPER_EMAIL=**********報告に使用される開発者メールアドレス**********
 set SSKTS_DEVELOPER_LINE_NOTIFY_ACCESS_TOKEN=**********報告に使用されるLINE通知のアクセストークン**********
-set STOCK_STATUS_REDIS_HOST=**********在庫状況保管用Redis Cacheホスト名**********
-set STOCK_STATUS_REDIS_PORT=**********在庫状況保管用Redis Cacheポート番号**********
-set STOCK_STATUS_REDIS_KEY=**********在庫状況保管用Redis Cache接続キー**********
+set AZURE_STORAGE_CONNECTION_STRING=**********チャート保管に使用されるAzure Blob Storageの接続文字列**********
 ```
 
 only on Aure WebApps
@@ -69,7 +65,3 @@ set WEBSITE_TIME_ZONE=Tokyo Standard Time
 
 # test
 `npm test`でチェック実行。
-
-
-# versioning
-`npm version patch -f -m "enter your commit comment..."`でチェック実行。
