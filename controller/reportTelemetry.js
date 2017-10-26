@@ -1,7 +1,6 @@
 "use strict";
 /**
  * 測定データを報告する
- *
  * @ignore
  */
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -14,14 +13,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const sskts = require("@motionpicture/sskts-domain");
-const azureStorage = require("azure-storage");
 const createDebug = require("debug");
 const moment = require("moment");
-const mongoose = require("mongoose");
 const request = require("request-promise-native");
 const mongooseConnectionOptions_1 = require("../mongooseConnectionOptions");
-mongoose.Promise = global.Promise;
-const debug = createDebug('sskts-reportjobs:controller:createTelemetry');
+const debug = createDebug('sskts-monitoring-jobs:controller:createTelemetry');
 const KILOSECONDS = 1000;
 const defaultParams = {
     chco: 'DAA8F5',
@@ -37,7 +33,7 @@ const defaultParams = {
 function main() {
     return __awaiter(this, void 0, void 0, function* () {
         debug('connecting mongodb...');
-        mongoose.connect(process.env.MONGOLAB_URI, mongooseConnectionOptions_1.default);
+        sskts.mongoose.connect(process.env.MONGOLAB_URI, mongooseConnectionOptions_1.default);
         // 集計単位数分の集計を行う
         const telemetryUnitTimeInSeconds = 60; // 集計単位時間(秒)
         const numberOfAggregationUnit = 720; // 集計単位数
@@ -45,33 +41,29 @@ function main() {
         const dateNowByUnitTime = moment.unix(dateNow.unix() - (dateNow.unix() % telemetryUnitTimeInSeconds));
         // 基本的に、集計は別のジョブでやっておいて、この報告ジョブでは取得して表示するだけのイメージ
         // tslint:disable-next-line:no-magic-numbers
-        const dateFrom = moment(dateNowByUnitTime).add(numberOfAggregationUnit * -telemetryUnitTimeInSeconds, 'seconds');
-        debug('reporting telemetries dateFrom - dateTo...', dateFrom, dateNowByUnitTime);
-        const telemetries = yield findTelemetriesByPeriod(dateFrom.toDate(), dateNowByUnitTime.toDate());
+        const measuredFrom = moment(dateNowByUnitTime).add(numberOfAggregationUnit * -telemetryUnitTimeInSeconds, 'seconds');
+        debug('reporting telemetries measuredFrom - dateTo...', measuredFrom, dateNowByUnitTime);
+        const telemetryRepo = new sskts.repository.Telemetry(sskts.mongoose.connection);
+        const telemetries = yield sskts.service.report.searchTelemetries({
+            measuredFrom: measuredFrom.toDate(),
+            measuredThrough: dateNowByUnitTime.toDate()
+        })(telemetryRepo);
         debug('telemetries length:', telemetries.length);
-        mongoose.disconnect();
-        yield reportLatenciesOfQueues(telemetries);
-        yield reportNumberOfTrialsOfQueues(telemetries);
+        sskts.mongoose.disconnect();
+        yield reportLatenciesOfTasks(telemetries);
+        yield reportNumberOfTrialsOfTasks(telemetries);
         yield reportNumberOfTransactionsByStatuses(telemetries);
         yield reportTransactionRequiredTimes(telemetries);
         yield reportTransactionAmounts(telemetries);
         yield reportNumberOfTransactionsUnderway(telemetries);
-        yield reportNumberOfTransactionsWithQueuesUnexported(telemetries);
+        yield reportNumberOfTasksUnexecuted(telemetries);
     });
 }
 exports.main = main;
-function findTelemetriesByPeriod(dateFrom, dateTo) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const telemetryAdapter = sskts.adapter.telemetry(mongoose.connection);
-        return yield telemetryAdapter.telemetryModel.find({
-            'stock.measured_at': {
-                $gte: dateFrom,
-                $lt: dateTo
-            }
-        }).sort({ 'stock.measured_at': 1 }).lean().exec();
-    });
-}
-function reportNumberOfTrialsOfQueues(telemetries) {
+/**
+ * タスク実行試行回数を報告する
+ */
+function reportNumberOfTrialsOfTasks(telemetries) {
     return __awaiter(this, void 0, void 0, function* () {
         const params = Object.assign({}, defaultParams, {
             chco: '79F67D,79CCF5,E96C6C',
@@ -93,7 +85,10 @@ function reportNumberOfTrialsOfQueues(telemetries) {
         yield sskts.service.notification.report2developers('タスク実行試行回数', '', imageFullsize, imageFullsize)();
     });
 }
-function reportLatenciesOfQueues(telemetries) {
+/**
+ * タスク待ち時間を報告する
+ */
+function reportLatenciesOfTasks(telemetries) {
     return __awaiter(this, void 0, void 0, function* () {
         const params = Object.assign({}, defaultParams, {
             chco: '79F67D,79CCF5,E96C6C',
@@ -115,6 +110,9 @@ function reportLatenciesOfQueues(telemetries) {
         yield sskts.service.notification.report2developers('タスク待ち時間', '', imageFullsize, imageFullsize)();
     });
 }
+/**
+ * 状態別の取引数を報告する
+ */
 function reportNumberOfTransactionsByStatuses(telemetries) {
     return __awaiter(this, void 0, void 0, function* () {
         const params = Object.assign({}, defaultParams, {
@@ -133,6 +131,9 @@ function reportNumberOfTransactionsByStatuses(telemetries) {
         yield sskts.service.notification.report2developers('開始取引数/minute 成立取引数/minute 離脱取引数/minute', '', imageFullsize, imageFullsize)();
     });
 }
+/**
+ * 取引所要時間を報告する
+ */
 function reportTransactionRequiredTimes(telemetries) {
     return __awaiter(this, void 0, void 0, function* () {
         const params = Object.assign({}, defaultParams, {
@@ -155,6 +156,9 @@ function reportTransactionRequiredTimes(telemetries) {
         yield sskts.service.notification.report2developers('取引平均所要時間(秒)', '', imageFullsize, imageFullsize)();
     });
 }
+/**
+ * 取引金額を報告する
+ */
 function reportTransactionAmounts(telemetries) {
     return __awaiter(this, void 0, void 0, function* () {
         const params = Object.assign({}, defaultParams, {
@@ -175,6 +179,9 @@ function reportTransactionAmounts(telemetries) {
         yield sskts.service.notification.report2developers('取引平均金額/minute', '', imageFullsize, imageFullsize)();
     });
 }
+/**
+ * 進行中取引数を報告する
+ */
 function reportNumberOfTransactionsUnderway(telemetries) {
     return __awaiter(this, void 0, void 0, function* () {
         const params = Object.assign({}, defaultParams, {
@@ -190,7 +197,10 @@ function reportNumberOfTransactionsUnderway(telemetries) {
         yield sskts.service.notification.report2developers('時点での進行中取引数', '', imageFullsize, imageFullsize)();
     });
 }
-function reportNumberOfTransactionsWithQueuesUnexported(telemetries) {
+/**
+ * 未実行タスク数を報告する
+ */
+function reportNumberOfTasksUnexecuted(telemetries) {
     return __awaiter(this, void 0, void 0, function* () {
         const params = Object.assign({}, defaultParams, {
             chco: 'DAA8F5',
@@ -223,48 +233,17 @@ function reportNumberOfTransactionsWithQueuesUnexported(telemetries) {
 // }
 function publishUrl(params) {
     return __awaiter(this, void 0, void 0, function* () {
-        return new Promise((resolve, reject) => __awaiter(this, void 0, void 0, function* () {
-            // google chart apiで画像生成
-            const body = yield request.post({
-                url: 'https://chart.googleapis.com/chart',
-                form: params,
-                encoding: 'binary'
-            }).then();
-            const buffer = new Buffer(body, 'binary');
-            debug('creating block blob... buffer.length:', buffer.length);
-            // save to blob
-            const blobService = azureStorage.createBlobService();
-            const CONTAINER = 'telemetry-images';
-            blobService.createContainerIfNotExists(CONTAINER, {}, (createContainerError) => {
-                if (createContainerError instanceof Error) {
-                    reject(createContainerError);
-                    return;
-                }
-                const blob = `sskts-monitoring-jobs-telemetry-images-${moment().format('YYYYMMDDHHmmssSSS')}.png`;
-                blobService.createBlockBlobFromText(CONTAINER, blob, buffer, {
-                    contentSettings: {
-                        contentType: 'image/png'
-                    }
-                }, (createBlockBlobError, result, response) => {
-                    debug(createBlockBlobError, result, response);
-                    if (createBlockBlobError instanceof Error) {
-                        reject(createBlockBlobError);
-                        return;
-                    }
-                    // 期限つきのURLを発行する
-                    const sharedAccessPolicy = {
-                        AccessPolicy: {
-                            Permissions: azureStorage.BlobUtilities.SharedAccessPermissions.READ,
-                            // tslint:disable-next-line:no-magic-numbers
-                            Start: moment().add(-10, 'minutes').toDate(),
-                            // tslint:disable-next-line:no-magic-numbers
-                            Expiry: moment().add(60, 'minutes').toDate()
-                        }
-                    };
-                    const token = blobService.generateSharedAccessSignature(result.container, result.name, sharedAccessPolicy);
-                    resolve(blobService.getUrl(result.container, result.name, token));
-                });
-            });
-        }));
+        // google chart apiで画像生成
+        const buffer = yield request.post({
+            url: 'https://chart.googleapis.com/chart',
+            form: params,
+            encoding: 'binary'
+        }).then((body) => new Buffer(body, 'binary'));
+        debug('creating block blob... buffer.length:', buffer.length);
+        return yield sskts.service.util.uploadFile({
+            fileName: `sskts-monitoring-jobs-reportTelemetry-images-${moment().format('YYYYMMDDHHmmssSSS')}.png`,
+            text: buffer,
+            expiryDate: moment().add(1, 'hour').toDate()
+        })();
     });
 }
