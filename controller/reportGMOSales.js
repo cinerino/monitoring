@@ -1,7 +1,6 @@
 "use strict";
 /**
  * GMO実売上状況を報告する
- *
  * @ignore
  */
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -14,14 +13,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const sskts = require("@motionpicture/sskts-domain");
-const azureStorage = require("azure-storage");
 const createDebug = require("debug");
 const moment = require("moment");
-const mongoose = require("mongoose");
 const request = require("request-promise-native");
 const mongooseConnectionOptions_1 = require("../mongooseConnectionOptions");
-mongoose.Promise = global.Promise;
-const debug = createDebug('sskts-reportjobs:controller:reportGMOSales');
+const debug = createDebug('sskts-monitoring-jobs:controller:reportGMOSales');
 const defaultParams = {
     chco: 'DAA8F5',
     chf: 'bg,s,283037',
@@ -34,34 +30,27 @@ const defaultParams = {
 };
 function main() {
     return __awaiter(this, void 0, void 0, function* () {
-        mongoose.connect(process.env.MONGOLAB_URI, mongooseConnectionOptions_1.default);
+        sskts.mongoose.connect(process.env.MONGOLAB_URI, mongooseConnectionOptions_1.default);
         yield reportGMOSalesAggregations();
         yield reportScatterChartInAmountAndTranDate();
-        mongoose.disconnect();
+        sskts.mongoose.disconnect();
     });
 }
 exports.main = main;
 /**
  * 時間帯ごとの実売上をプロットしてみる
- * todo 調整
  */
 function reportScatterChartInAmountAndTranDate() {
     return __awaiter(this, void 0, void 0, function* () {
         // ここ24時間の実売上をプロットする
-        const dateTo = moment();
+        const madeThrough = moment();
         // tslint:disable-next-line:no-magic-numbers
-        const dateFrom = moment(dateTo).add(-3, 'days');
-        const gmoNotificationAdapter = sskts.adapter.gmoNotification(mongoose.connection);
-        const gmoNotifications = yield gmoNotificationAdapter.gmoNotificationModel.find({
-            job_cd: 'SALES',
-            tran_date: {
-                // tslint:disable-next-line:no-magic-numbers
-                $gte: dateFrom.format('YYYYMMDDHHmmss'),
-                $lt: dateTo.format('YYYYMMDDHHmmss')
-            }
-        }, 'amount tran_date').lean().exec();
+        const madeFrom = moment(madeThrough).add(-3, 'days');
+        const gmoNotificationRepo = new sskts.repository.GMONotification(sskts.mongoose.connection);
+        const gmoNotifications = yield sskts.service.report.searchGMOSales(madeFrom.toDate(), madeThrough.toDate())(gmoNotificationRepo);
         debug('gmoNotifications:', gmoNotifications.length);
-        const maxAmount = gmoNotifications.reduce((a, b) => Math.max(a, b.amount), 0);
+        // tslint:disable-next-line:no-magic-numbers
+        const maxAmount = gmoNotifications.reduce((a, b) => Math.max(a, parseInt(b.amount, 10)), 0);
         debug('maxAmount:', maxAmount);
         // 時間帯x金額帯ごとに集計
         const AMOUNT_UNIT = 1000;
@@ -69,7 +58,8 @@ function reportScatterChartInAmountAndTranDate() {
         gmoNotifications.forEach((gmoNotification) => {
             // tslint:disable-next-line:no-magic-numbers
             const x = Number(gmoNotification.tran_date.slice(8, 10));
-            const y = Math.floor(gmoNotification.amount / AMOUNT_UNIT);
+            // tslint:disable-next-line:no-magic-numbers
+            const y = Math.floor(parseInt(gmoNotification.amount, 10) / AMOUNT_UNIT);
             if (prots[`${x}x${y}`] === undefined) {
                 prots[`${x}x${y}`] = {
                     x: x,
@@ -101,7 +91,7 @@ function reportScatterChartInAmountAndTranDate() {
         // params.chd += '|' + gmoNotifications.map((gmoNotification) => Math.floor(gmoNotification.amount / 100)).join(',');
         const imageFullsize = yield publishUrl(params);
         yield sskts.service.notification.report2developers(`GMO売上散布図
-${dateFrom.format('MM/DD HH:mm:ss')}-${dateTo.format('MM/DD HH:mm:ss')}`, `サンプル数:${gmoNotifications.length}`, imageFullsize, imageFullsize)();
+${madeFrom.format('MM/DD HH:mm:ss')}-${madeThrough.format('MM/DD HH:mm:ss')}`, `サンプル数:${gmoNotifications.length}`, imageFullsize, imageFullsize)();
     });
 }
 function reportGMOSalesAggregations() {
@@ -115,16 +105,16 @@ function reportGMOSalesAggregations() {
         // 集計単位数分の集計を行う
         let aggregations = yield Promise.all(Array.from(Array(numberOfAggregationUnit)).map((__, index) => __awaiter(this, void 0, void 0, function* () {
             debug(index);
-            const dateTo = moment.unix((dateNowByUnitTime.unix() - (dateNowByUnitTime.unix() % aggregationUnitTimeInSeconds)))
+            const madeThrough = moment.unix((dateNowByUnitTime.unix() - (dateNowByUnitTime.unix() % aggregationUnitTimeInSeconds)))
                 .add(index * -aggregationUnitTimeInSeconds, 'seconds').toDate();
             // tslint:disable-next-line:no-magic-numbers
-            const dateFrom = moment(dateTo).add(-aggregationUnitTimeInSeconds, 'seconds').toDate();
-            debug(dateFrom.toISOString(), dateTo.toISOString());
-            const gmoNotificationAdapter = sskts.adapter.gmoNotification(mongoose.connection);
-            const gmoSales = yield sskts.service.report.searchGMOSales(dateFrom, dateTo)(gmoNotificationAdapter);
+            const madeFrom = moment(madeThrough).add(-aggregationUnitTimeInSeconds, 'seconds').toDate();
+            debug(madeFrom.toISOString(), madeThrough.toISOString());
+            const gmoNotificationRepo = new sskts.repository.GMONotification(sskts.mongoose.connection);
+            const gmoSales = yield sskts.service.report.searchGMOSales(madeFrom, madeThrough)(gmoNotificationRepo);
             return {
-                dateFrom: dateFrom,
-                dateTo: dateTo,
+                madeFrom: madeFrom,
+                madeThrough: madeThrough,
                 gmoSales: gmoSales,
                 // tslint:disable-next-line:no-magic-numbers
                 totalAmount: gmoSales.reduce((a, b) => a + parseInt(b.amount, 10), 0) // 合計金額を算出
@@ -147,53 +137,22 @@ function reportGMOSalesAggregations() {
         const imageFullsize = yield publishUrl(params);
         const lastAggregation = aggregations[aggregations.length - 1];
         yield sskts.service.notification.report2developers(`GMO売上金額遷移(15分単位)
-${moment(aggregations[0].dateFrom).format('MM/DD HH:mm:ss')}-${moment(lastAggregation.dateTo).format('MM/DD HH:mm:ss')}`, '', imageFullsize, imageFullsize)();
+${moment(aggregations[0].madeFrom).format('MM/DD HH:mm:ss')}-${moment(lastAggregation.madeThrough).format('MM/DD HH:mm:ss')}`, '', imageFullsize, imageFullsize)();
     });
 }
 function publishUrl(params) {
     return __awaiter(this, void 0, void 0, function* () {
-        return new Promise((resolve, reject) => __awaiter(this, void 0, void 0, function* () {
-            // google chart apiで画像生成
-            const body = yield request.post({
-                url: 'https://chart.googleapis.com/chart',
-                form: params,
-                encoding: 'binary'
-            }).then();
-            const buffer = new Buffer(body, 'binary');
-            debug('creating block blob... buffer.length:', buffer.length);
-            // save to blob
-            const blobService = azureStorage.createBlobService();
-            const CONTAINER = 'telemetry-images';
-            blobService.createContainerIfNotExists(CONTAINER, {}, (createContainerError) => {
-                if (createContainerError instanceof Error) {
-                    reject(createContainerError);
-                    return;
-                }
-                const blob = `sskts-monitoring-jobs-telemetry-images-${moment().format('YYYYMMDDHHmmssSSS')}.png`;
-                blobService.createBlockBlobFromText(CONTAINER, blob, buffer, {
-                    contentSettings: {
-                        contentType: 'image/png'
-                    }
-                }, (createBlockBlobError, result, response) => {
-                    debug(createBlockBlobError, result, response);
-                    if (createBlockBlobError instanceof Error) {
-                        reject(createBlockBlobError);
-                        return;
-                    }
-                    // 期限つきのURLを発行する
-                    const sharedAccessPolicy = {
-                        AccessPolicy: {
-                            Permissions: azureStorage.BlobUtilities.SharedAccessPermissions.READ,
-                            // tslint:disable-next-line:no-magic-numbers
-                            Start: moment().add(-10, 'minutes').toDate(),
-                            // tslint:disable-next-line:no-magic-numbers
-                            Expiry: moment().add(60, 'minutes').toDate()
-                        }
-                    };
-                    const token = blobService.generateSharedAccessSignature(result.container, result.name, sharedAccessPolicy);
-                    resolve(blobService.getUrl(result.container, result.name, token));
-                });
-            });
-        }));
+        // google chart apiで画像生成
+        const buffer = yield request.post({
+            url: 'https://chart.googleapis.com/chart',
+            form: params,
+            encoding: 'binary'
+        }).then((body) => new Buffer(body, 'binary'));
+        debug('creating block blob... buffer.length:', buffer.length);
+        return yield sskts.service.util.uploadFile({
+            fileName: `sskts-monitoring-jobs-reportGMOSales-images-${moment().format('YYYYMMDDHHmmssSSS')}.png`,
+            text: buffer,
+            expiryDate: moment().add(1, 'hour').toDate()
+        })();
     });
 }
