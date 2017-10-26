@@ -43,7 +43,7 @@ async function reportScatterChartInAmountAndTranDate() {
     const gmoNotifications = await sskts.service.report.searchGMOSales(madeFrom.toDate(), madeThrough.toDate())(gmoNotificationRepo);
     debug('gmoNotifications:', gmoNotifications.length);
     // tslint:disable-next-line:no-magic-numbers
-    const maxAmount = gmoNotifications.reduce((a, b) => Math.max(a, parseInt(b.amount, 10)), 0);
+    const maxAmount = gmoNotifications.reduce((a, b) => Math.max(a, b.amount), 0);
     debug('maxAmount:', maxAmount);
 
     // 時間帯x金額帯ごとに集計
@@ -57,9 +57,8 @@ async function reportScatterChartInAmountAndTranDate() {
     } = {};
     gmoNotifications.forEach((gmoNotification) => {
         // tslint:disable-next-line:no-magic-numbers
-        const x = Number(gmoNotification.tran_date.slice(8, 10));
-        // tslint:disable-next-line:no-magic-numbers
-        const y = Math.floor(parseInt(gmoNotification.amount, 10) / AMOUNT_UNIT);
+        const x = Number(gmoNotification.tranDate.slice(8, 10));
+        const y = Math.floor(gmoNotification.amount / AMOUNT_UNIT);
         if (prots[`${x}x${y}`] === undefined) {
             prots[`${x}x${y}`] = {
                 x: x,
@@ -88,9 +87,9 @@ async function reportScatterChartInAmountAndTranDate() {
         }
     };
     params.chd += Object.keys(prots).map((key) => prots[key].x).join(',');
-    params.chd += '|' + Object.keys(prots).map((key) => prots[key].y).join(',');
+    params.chd += `|${Object.keys(prots).map((key) => prots[key].y).join(',')}`;
     // tslint:disable-next-line:no-magic-numbers
-    params.chd += '|' + Object.keys(prots).map((key) => Math.floor(prots[key].size / sizeMax * 50)).join(',');
+    params.chd += `|${Object.keys(prots).map((key) => Math.floor(prots[key].size / sizeMax * 50)).join(',')}`;
     // params.chd += gmoNotifications.map((gmoNotification) => Number(gmoNotification.tran_date.slice(8, 10))).join(',');
     // params.chd += '|' + gmoNotifications.map((gmoNotification) => Math.floor(gmoNotification.amount / 100)).join(',');
     const imageFullsize = await publishUrl(params);
@@ -129,8 +128,7 @@ async function reportGMOSalesAggregations() {
             madeFrom: madeFrom,
             madeThrough: madeThrough,
             gmoSales: gmoSales,
-            // tslint:disable-next-line:no-magic-numbers
-            totalAmount: gmoSales.reduce((a, b) => a + parseInt(b.amount, 10), 0) // 合計金額を算出
+            totalAmount: gmoSales.reduce((a, b) => a + b.amount, 0) // 合計金額を算出
         };
     }));
     aggregations = aggregations.reverse();
@@ -172,7 +170,7 @@ async function publishUrl(params: any) {
     }).then((body) => new Buffer(body, 'binary'));
     debug('creating block blob... buffer.length:', buffer.length);
 
-    return await sskts.service.util.uploadFile({
+    return sskts.service.util.uploadFile({
         fileName: `sskts-monitoring-jobs-reportGMOSales-images-${moment().format('YYYYMMDDHHmmssSSS')}.png`,
         text: buffer,
         expiryDate: moment().add(1, 'hour').toDate()
