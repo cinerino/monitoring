@@ -47,7 +47,10 @@ function reportScatterChartInAmountAndTranDate() {
         // tslint:disable-next-line:no-magic-numbers
         const madeFrom = moment(madeThrough).add(-3, 'days');
         const gmoNotificationRepo = new sskts.repository.GMONotification(sskts.mongoose.connection);
-        const gmoNotifications = yield sskts.service.report.searchGMOSales(madeFrom.toDate(), madeThrough.toDate())(gmoNotificationRepo);
+        const gmoNotifications = yield gmoNotificationRepo.searchSales({
+            tranDateFrom: madeFrom.toDate(),
+            tranDateThrough: madeThrough.toDate()
+        });
         debug('gmoNotifications:', gmoNotifications.length);
         // tslint:disable-next-line:no-magic-numbers
         const maxAmount = gmoNotifications.reduce((a, b) => Math.max(a, b.amount), 0);
@@ -110,7 +113,10 @@ function reportGMOSalesAggregations() {
             const madeFrom = moment(madeThrough).add(-aggregationUnitTimeInSeconds, 'seconds').toDate();
             debug(madeFrom.toISOString(), madeThrough.toISOString());
             const gmoNotificationRepo = new sskts.repository.GMONotification(sskts.mongoose.connection);
-            const gmoSales = yield sskts.service.report.searchGMOSales(madeFrom, madeThrough)(gmoNotificationRepo);
+            const gmoSales = yield gmoNotificationRepo.searchSales({
+                tranDateFrom: madeFrom,
+                tranDateThrough: madeThrough
+            });
             return {
                 madeFrom: madeFrom,
                 madeThrough: madeThrough,
