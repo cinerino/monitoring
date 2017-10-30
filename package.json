@@ -31,7 +31,7 @@
     "typescript": "^2.5.3"
   },
   "engines": {
-    "node": ">=6.9.1",
+    "node": ">=8.0.0",
     "npm": ">=5.3.0"
   },
   "keywords": [],
@@ -51,5 +51,5 @@
     "version": "git add -A",
     "postversion": "git push origin --tags"
   },
-  "version": "2.1.0"
+  "version": "3.0.0"
 }
