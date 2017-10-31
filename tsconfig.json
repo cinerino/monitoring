@@ -4,7 +4,6 @@
         "allowUnusedLabels": false,
         "charset": "utf8",
         "declaration": false,
-        // "declarationDir": "./types",
         "diagnostics": false,
         "disableSizeLimit": false,
         "emitDecoratorMetadata": true,
@@ -17,7 +16,7 @@
         "listFiles": false,
         "locale": "en-us",
         "module": "commonjs",
-        "newLine": "CRLF",
+        "newLine": "LF",
         "noImplicitAny": true,
         "noImplicitReturns": true,
         "noImplicitThis": true,
@@ -38,7 +37,7 @@
         "watch": false
     },
     "exclude": [
-        "docs",
+        "doc",
         "node_modules",
         "types"
     ]
