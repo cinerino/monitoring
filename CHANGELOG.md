@@ -7,7 +7,6 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 ### Added
 
 ### Changed
-- MongoDBのコレクションのいくつかのインデックスを追加。
 
 ### Deprecated
 
@@ -17,6 +16,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ### Security
 
+
+## v3.0.1 - 2017-10-31
+### Changed
+- MongoDBのコレクションのいくつかのインデックスを追加。
 
 ## v3.0.0 - 2017-10-31
 ### Changed
