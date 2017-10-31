@@ -1,67 +1,76 @@
-# 佐々木興行チケットシステムレポートジョブアプリケーション
+<img src="https://motionpicture.jp/images/common/logo_01.svg" alt="motionpicture" title="motionpicture" align="right" height="56" width="98"/>
 
-# Features
+# SSKTS 監視ジョブアプリケーション
 
-# Getting Started
+## Getting Started
 
-## インフラ
+### インフラ
 基本的にnode.jsのウェブアプリケーション。
+AzureのWebAppsでWebJobsを動作させる想定。
 
-## 言語
-実態としては、linuxあるいはwindows上でのnode.js。
-プログラミング言語としては、alternative javascriptのひとつであるTypeScript。
+### 言語
+実態としては、linuxあるいはwindows上でのnode.js。プログラミング言語としては、TypeScript。
 
-* TypeScript(https://www.typescriptlang.org/)
+* [TypeScript](https://www.typescriptlang.org/)
 
-## 開発方法
+### 開発方法
 npmでパッケージをインストール。
 
 ```shell
 npm install
 ```
-* npm(https://www.npmjs.com/)
+* [npm](https://www.npmjs.com/)
 
 
 typescriptをjavascriptにコンパイル。
 
 ```shell
-npm run build -- -w
+npm run build
 ```
 
 
-## Required environment variables
-```shell
-set NODE_ENV=**********環境名**********
-set MONGOLAB_URI=**********mongodb接続URI**********
-set SENDGRID_API_KEY=**********sendgrid api key**********
-set GMO_ENDPOINT=**********gmo apiのエンドポイント**********
-set COA_ENDPOINT=**********coa apiのエンドポイント**********
-set COA_REFRESH_TOKEN=**********coa apiのリフレッシュトークン**********
-set SSKTS_DEVELOPER_EMAIL=**********報告に使用される開発者メールアドレス**********
-set SSKTS_DEVELOPER_LINE_NOTIFY_ACCESS_TOKEN=**********報告に使用されるLINE通知のアクセストークン**********
-set AZURE_STORAGE_CONNECTION_STRING=**********チャート保管に使用されるAzure Blob Storageの接続文字列**********
-```
+### Environment variables
 
-only on Aure WebApps
+| Name                                       | Required              | Purpose                        | Value        |
+|--------------------------------------------|-----------------------|--------------------------------|--------------|
+| `DEBUG`                                    | false                 | Debug                          | sskts-monitoring-jobs:* |
+| `NPM_TOKEN`                                | true                  | NPM auth token                 ||
+| `NODE_ENV`                                 | true                  | environment name               ||
+| `MONGOLAB_URI`                             | true                  | MongoDB connection URI         ||
+| `SENDGRID_API_KEY`                         | true                  | SendGrid API Key               ||
+| `GMO_ENDPOINT`                             | true                  | GMO API endpoint               ||
+| `GMO_SITE_ID`                              | true                  | GMO SiteID                     ||
+| `GMO_SITE_PASS`                            | true                  | GMO SitePass                   ||
+| `COA_ENDPOINT`                             | true                  | COA API endpoint               ||
+| `COA_REFRESH_TOKEN`                        | true                  | COA API refresh token          ||
+| `SSKTS_DEVELOPER_EMAIL`                    | true                  | 開発者通知用メールアドレス        ||
+| `SSKTS_DEVELOPER_LINE_NOTIFY_ACCESS_TOKEN` | true                  | LINE Notifyでのレポート通知      ||
+| `AZURE_STORAGE_CONNECTION_STRING`          | true                  | Save charts on azure storage   ||
+| `WEBSITE_NODE_DEFAULT_VERSION`             | only on Azure WebApps | Node.js version                ||
+| `WEBSITE_TIME_ZONE`                        | only on Azure WebApps |                                | Tokyo Standard Time |
 
-```shell
-set WEBSITE_NODE_DEFAULT_VERSION=**********node.jsバージョン=**********
-set WEBSITE_TIME_ZONE=Tokyo Standard Time
-```
 
-
-# tslint
+## tslint
 
 コード品質チェックをtslintで行う。
 * [tslint](https://github.com/palantir/tslint)
 * [tslint-microsoft-contrib](https://github.com/Microsoft/tslint-microsoft-contrib)
 
-`npm run check`でチェック実行。改修の際には、必ずチェックすること。
+`npm run check`でチェック実行。
 
 
-# clean
+## パッケージ脆弱性のチェック
+
+* [nsp](https://www.npmjs.com/package/nsp)
+
+
+## clean
 `npm run clean`で不要なソース削除。
 
 
-# test
-`npm test`でチェック実行。
+## テスト
+`npm test`でテスト実行。
+
+
+## ドキュメント
+`npm run doc`でjsdocが作成されます。

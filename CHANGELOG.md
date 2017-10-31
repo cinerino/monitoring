@@ -7,7 +7,6 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 ### Added
 
 ### Changed
-- sskts-domain@23.0.0に対応。
 
 ### Deprecated
 
@@ -16,3 +15,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 ### Fixed
 
 ### Security
+
+
+## v3.0.0 - 2017-10-31
+### Changed
+- sskts-domain@v23(スキーマ一新)に対応。
