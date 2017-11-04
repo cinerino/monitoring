@@ -5,6 +5,7 @@
 
 import * as sskts from '@motionpicture/sskts-domain';
 import * as createDebug from 'debug';
+import * as moment from 'moment';
 
 import mongooseConnectionOptions from '../../../../mongooseConnectionOptions';
 
@@ -17,8 +18,15 @@ export async function main() {
     const taskRepo = new sskts.repository.Task(sskts.mongoose.connection);
     const telemetryRepo = new sskts.repository.Telemetry(sskts.mongoose.connection);
     const transactionRepo = new sskts.repository.Transaction(sskts.mongoose.connection);
+    const authorizeActionRepo = new sskts.repository.action.Authorize(sskts.mongoose.connection);
     debug('creating telemetry...');
-    await sskts.service.report.createTelemetry()(taskRepo, telemetryRepo, transactionRepo);
+
+    const dateNow = moment();
+    // tslint:disable-next-line:no-magic-numbers
+    const measuredAt = moment.unix((dateNow.unix() - (dateNow.unix() % 60)));
+
+    await sskts.service.report.createTelemetry(measuredAt.toDate())
+        (taskRepo, telemetryRepo, transactionRepo, authorizeActionRepo);
 
     sskts.mongoose.disconnect();
 }

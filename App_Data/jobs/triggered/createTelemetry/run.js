@@ -14,6 +14,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 const sskts = require("@motionpicture/sskts-domain");
 const createDebug = require("debug");
+const moment = require("moment");
 const mongooseConnectionOptions_1 = require("../../../../mongooseConnectionOptions");
 const debug = createDebug('sskts-monitoring-jobs:createTelemetry');
 function main() {
@@ -23,8 +24,12 @@ function main() {
         const taskRepo = new sskts.repository.Task(sskts.mongoose.connection);
         const telemetryRepo = new sskts.repository.Telemetry(sskts.mongoose.connection);
         const transactionRepo = new sskts.repository.Transaction(sskts.mongoose.connection);
+        const authorizeActionRepo = new sskts.repository.action.Authorize(sskts.mongoose.connection);
         debug('creating telemetry...');
-        yield sskts.service.report.createTelemetry()(taskRepo, telemetryRepo, transactionRepo);
+        const dateNow = moment();
+        // tslint:disable-next-line:no-magic-numbers
+        const measuredAt = moment.unix((dateNow.unix() - (dateNow.unix() % 60)));
+        yield sskts.service.report.createTelemetry(measuredAt.toDate())(taskRepo, telemetryRepo, transactionRepo, authorizeActionRepo);
         sskts.mongoose.disconnect();
     });
 }

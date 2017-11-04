@@ -50,11 +50,12 @@ function main() {
         })(telemetryRepo);
         debug('telemetries length:', telemetries.length);
         sskts.mongoose.disconnect();
-        yield reportLatenciesOfTasks(telemetries);
-        yield reportNumberOfTrialsOfTasks(telemetries);
-        yield reportNumberOfTransactionsByStatuses(telemetries);
-        yield reportTransactionRequiredTimes(telemetries);
-        yield reportTransactionAmounts(telemetries);
+        yield reportLatenciesOfTasks(telemetries); // タスク待機時間
+        yield reportNumberOfTrialsOfTasks(telemetries); // タスク試行回数
+        yield reportNumberOfTransactionsByStatuses(telemetries); // ステータスごとの取引数
+        yield reportTransactionRequiredTimes(telemetries); // 平均所要時間
+        yield reportTransactionAmounts(telemetries); // 平均金額
+        yield reportTransactionActions(telemetries); // 平均アクション数
         yield reportNumberOfTransactionsUnderway(telemetries);
         yield reportNumberOfTasksUnexecuted(telemetries);
     });
@@ -78,7 +79,9 @@ function reportNumberOfTrialsOfTasks(telemetries) {
                 ? Math.floor(telemetry.flow.tasks.totalNumberOfTrials / telemetry.flow.tasks.numberOfExecuted)
                 : 0;
         }).join(',');
+        // tslint:disable-next-line:prefer-template
         params.chd += '|' + telemetries.map((telemetry) => (telemetry.flow.tasks !== undefined) ? telemetry.flow.tasks.maxNumberOfTrials : 0).join(',');
+        // tslint:disable-next-line:prefer-template
         params.chd += '|' + telemetries.map((telemetry) => (telemetry.flow.tasks !== undefined) ? telemetry.flow.tasks.minNumberOfTrials : 0).join(',');
         const imageFullsize = yield publishUrl(params);
         debug('imageFullsize:', imageFullsize);
@@ -103,7 +106,9 @@ function reportLatenciesOfTasks(telemetries) {
                 ? Math.floor(telemetry.flow.tasks.totalLatencyInMilliseconds / telemetry.flow.tasks.numberOfExecuted / KILOSECONDS)
                 : 0;
         }).join(',');
+        // tslint:disable-next-line:prefer-template
         params.chd += '|' + telemetries.map((telemetry) => (telemetry.flow.tasks !== undefined) ? Math.floor(telemetry.flow.tasks.maxLatencyInMilliseconds / KILOSECONDS) : 0).join(',');
+        // tslint:disable-next-line:prefer-template
         params.chd += '|' + telemetries.map((telemetry) => (telemetry.flow.tasks !== undefined) ? Math.floor(telemetry.flow.tasks.minLatencyInMilliseconds / KILOSECONDS) : 0).join(',');
         const imageFullsize = yield publishUrl(params);
         debug('imageFullsize:', imageFullsize);
@@ -119,13 +124,13 @@ function reportNumberOfTransactionsByStatuses(telemetries) {
             chco: '79F67D,79CCF5,E96C6C',
             chxt: 'x,y',
             chd: 't:',
-            chxl: '0:|12時間前|9時間前|6時間前|3時間前|0時間前|2:|回',
+            chxl: '0:|12時間前|9時間前|6時間前|3時間前|0時間前|2:|個',
             chdl: '開始|成立|離脱',
             chs: '750x250'
         });
         params.chd += telemetries.map((telemetry) => telemetry.flow.transactions.numberOfStarted).join(',');
-        params.chd += '|' + telemetries.map((telemetry) => telemetry.flow.transactions.numberOfClosed).join(',');
-        params.chd += '|' + telemetries.map((telemetry) => telemetry.flow.transactions.numberOfExpired).join(',');
+        params.chd += `|${telemetries.map((telemetry) => telemetry.flow.transactions.numberOfConfirmed).join(',')}`;
+        params.chd += `|${telemetries.map((telemetry) => telemetry.flow.transactions.numberOfExpired).join(',')}`;
         const imageFullsize = yield publishUrl(params);
         debug('imageFullsize:', imageFullsize);
         yield sskts.service.notification.report2developers('開始取引数/minute 成立取引数/minute 離脱取引数/minute', '', imageFullsize, imageFullsize)();
@@ -140,20 +145,15 @@ function reportTransactionRequiredTimes(telemetries) {
             chco: 'DAA8F5',
             chxt: 'x,y',
             chd: 't:',
-            chxl: '0:|12時間前|9時間前|6時間前|3時間前|0時間前|2:|回',
+            chxl: '0:|12時間前|9時間前|6時間前|3時間前|0時間前|2:|秒',
             chdl: '所要時間',
             chs: '750x250'
         });
-        params.chd += telemetries.map((telemetry) => {
-            return (telemetry.flow.transactions.numberOfClosed > 0)
-                ? Math.floor(
-                // ミリ秒→秒変換
-                telemetry.flow.transactions.totalRequiredTimeInMilliseconds / telemetry.flow.transactions.numberOfClosed / KILOSECONDS)
-                : 0;
-        }).join(',');
+        params.chd += telemetries.map((telemetry) => Math.floor(telemetry.flow.transactions.averageRequiredTimeInMilliseconds / KILOSECONDS) // ミリ秒→秒変換
+        ).join(',');
         const imageFullsize = yield publishUrl(params);
         debug('imageFullsize:', imageFullsize);
-        yield sskts.service.notification.report2developers('取引平均所要時間(秒)', '', imageFullsize, imageFullsize)();
+        yield sskts.service.notification.report2developers('取引所要時間平均値(秒)', '', imageFullsize, imageFullsize)();
     });
 }
 /**
@@ -165,18 +165,34 @@ function reportTransactionAmounts(telemetries) {
             chco: 'DAA8F5',
             chxt: 'x,y',
             chd: 't:',
-            chxl: '0:|12時間前|9時間前|6時間前|3時間前|0時間前|2:|円',
+            chxl: '0:|12時間前|9時間前|6時間前|3時間前|0時間前|2:|JPY',
             chdl: '金額',
             chs: '750x250'
         });
-        params.chd += telemetries.map((telemetry) => {
-            return (telemetry.flow.transactions.numberOfClosed > 0)
-                ? Math.floor(telemetry.flow.transactions.totalAmount / telemetry.flow.transactions.numberOfClosed)
-                : 0;
-        }).join(',');
+        params.chd += telemetries.map((telemetry) => telemetry.flow.transactions.averageAmount).join(',');
         const imageFullsize = yield publishUrl(params);
         debug('imageFullsize:', imageFullsize);
-        yield sskts.service.notification.report2developers('取引平均金額/minute', '', imageFullsize, imageFullsize)();
+        yield sskts.service.notification.report2developers('取引金額平均値/minute', '', imageFullsize, imageFullsize)();
+    });
+}
+/**
+ * 取引アクション数を報告する
+ */
+function reportTransactionActions(telemetries) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const params = Object.assign({}, defaultParams, {
+            chco: '79CCF5,E96C6C',
+            chxt: 'x,y',
+            chd: 't:',
+            chxl: '0:|12時間前|9時間前|6時間前|3時間前|0時間前|2:|個',
+            chdl: '成立|離脱',
+            chs: '750x250'
+        });
+        params.chd += telemetries.map((telemetry) => telemetry.flow.transactions.averageNumberOfActionsOnConfirmed).join(',');
+        params.chd += `|${telemetries.map((telemetry) => telemetry.flow.transactions.averageNumberOfActionsOnExpired).join(',')}`;
+        const imageFullsize = yield publishUrl(params);
+        debug('imageFullsize:', imageFullsize);
+        yield sskts.service.notification.report2developers('取引アクション数平均値/minute', '', imageFullsize, imageFullsize)();
     });
 }
 /**
@@ -240,7 +256,7 @@ function publishUrl(params) {
             encoding: 'binary'
         }).then((body) => new Buffer(body, 'binary'));
         debug('creating block blob... buffer.length:', buffer.length);
-        return yield sskts.service.util.uploadFile({
+        return sskts.service.util.uploadFile({
             fileName: `sskts-monitoring-jobs-reportTelemetry-images-${moment().format('YYYYMMDDHHmmssSSS')}.png`,
             text: buffer,
             expiryDate: moment().add(1, 'hour').toDate()
