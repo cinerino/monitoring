@@ -7,7 +7,6 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 ### Added
 
 ### Changed
-- 測定データ報告の種類を追加。
 
 ### Deprecated
 
@@ -17,6 +16,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ### Security
 
+
+## v3.0.2 - 2017-11-04
+### Changed
+- 測定データ報告の種類を追加。
 
 ## v3.0.1 - 2017-10-31
 ### Changed
