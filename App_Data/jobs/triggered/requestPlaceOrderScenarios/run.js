@@ -15,7 +15,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const sskts = require("@motionpicture/sskts-domain");
 const createDebug = require("debug");
 const json2csv = require("json2csv");
-const request = require("request");
+const moment = require("moment");
+const request = require("request-promise-native");
 const timers_1 = require("timers");
 const processPlaceOrder = require("./processPlaceOrder");
 const debug = createDebug('sskts-monitoring-jobs:requestPlaceOrderScenarios');
@@ -28,11 +29,12 @@ const configurations = {
     apiEndpoint: process.env.SSKTS_API_ENDPOINT
 };
 const theaterCodes = ['118'];
-// configurations.numberOfTrials = numberOfTrials;
+console.error('WEBJOBS_COMMAND_ARGUMENTS:', process.env.WEBJOBS_COMMAND_ARGUMENTS);
+console.error('argv:', process.argv);
 const timer = timers_1.setInterval(() => __awaiter(this, void 0, void 0, function* () {
+    // プロセス数が設定に達したらタイマー終了
     if (numberOfProcesses >= configurations.numberOfTrials) {
         clearTimeout(timer);
-        // rl.close();
         return;
     }
     numberOfProcesses += 1;
@@ -105,31 +107,27 @@ numberOfTryAuthorizeCreditCard   : ${result.numberOfTryAuthorizeCreditCard}
 }), configurations.intervals);
 function onAllProcessed() {
     return __awaiter(this, void 0, void 0, function* () {
-        return new Promise((resolve) => __awaiter(this, void 0, void 0, function* () {
-            // debug('sending a report...');
-            // sort result
-            results = results.sort((a, b) => (a.processNumber > b.processNumber) ? 1 : -1);
-            // csv作成
-            const fields = Object.keys(results[0]);
-            const fieldNames = Object.keys(results[0]);
-            const csv = json2csv({
-                data: results,
-                fields: fields,
-                fieldNames: fieldNames,
-                del: ',',
-                newLine: '\n',
-                preserveNewLinesInValues: true
-            });
-            // upload csv
-            const expiryDate = new Date();
-            expiryDate.setDate(expiryDate.getDate() + 1);
-            const url = yield sskts.service.util.uploadFile({
-                fileName: 'sskts-report-loadtest-placeOrderTransactions.csv',
-                text: csv,
-                expiryDate: expiryDate
-            })();
-            // console.log('csv url:', url);
-            const text = `## Completion of SSKTS placeOrder transaction loadtest
+        // debug('sending a report...');
+        // sort result
+        results = results.sort((a, b) => (a.processNumber > b.processNumber) ? 1 : -1);
+        // csv作成
+        const fields = Object.keys(results[0]);
+        const fieldNames = Object.keys(results[0]);
+        const csv = json2csv({
+            data: results,
+            fields: fields,
+            fieldNames: fieldNames,
+            del: ',',
+            newLine: '\n',
+            preserveNewLinesInValues: true
+        });
+        // upload csv
+        const url = yield sskts.service.util.uploadFile({
+            fileName: 'sskts-report-loadtest-placeOrderTransactions.csv',
+            text: csv,
+            expiryDate: moment().add(1, 'day').toDate()
+        })();
+        const text = `## Completion of SSKTS placeOrder transaction loadtest
 ### Configurations
 key  | value
 ------------- | -------------
@@ -139,41 +137,33 @@ api endpoint  | ${configurations.apiEndpoint}
 ### Reports
 - Please check out the csv report [here](${url}).
         `;
-            const emailMessage = sskts.factory.creativeWork.message.email.create({
-                identifier: 'identifier',
-                sender: {
-                    name: 'SSKTS Report',
-                    email: 'noreply@example.com'
-                },
-                toRecipient: {
-                    name: 'motionpicture developers',
-                    email: 'hello@motionpicture.jp'
-                },
-                about: 'Completion of SSKTS placeOrder transaction loadtest',
-                text: text
-            });
-            yield sskts.service.notification.sendEmail(emailMessage)();
-            // backlogへ通知
-            request.get({
-                url: `https://m-p.backlog.jp/api/v2/projects/SSKTS/users?apiKey=${process.env.BACKLOG_API_KEY}`,
-                json: true
-            }, (error, response, body) => {
-                debug(error, response.statusCode);
-                const users = body;
-                request.post({
-                    url: `https://m-p.backlog.jp/api/v2/issues/SSKTS-621/comments?apiKey=${process.env.BACKLOG_API_KEY}`,
-                    form: {
-                        content: text,
-                        notifiedUserId: users.map((user) => user.id)
-                    }
-                }, 
-                // tslint:disable-next-line:no-shadowed-variable
-                (error, response) => {
-                    debug(error, response.statusCode);
-                    debug('posted to backlog.', error);
-                    resolve();
-                });
-            });
-        }));
+        const emailMessage = sskts.factory.creativeWork.message.email.create({
+            identifier: 'identifier',
+            sender: {
+                name: 'SSKTS Report',
+                email: 'noreply@example.com'
+            },
+            toRecipient: {
+                name: 'motionpicture developers',
+                email: 'hello@motionpicture.jp'
+            },
+            about: 'Completion of SSKTS placeOrder transaction loadtest',
+            text: text
+        });
+        yield sskts.service.notification.sendEmail(emailMessage)();
+        // backlogへ通知
+        const users = yield request.get({
+            url: `https://m-p.backlog.jp/api/v2/projects/SSKTS/users?apiKey=${process.env.BACKLOG_API_KEY}`,
+            json: true
+        }).then((body) => body);
+        debug('users:', users);
+        yield request.post({
+            url: `https://m-p.backlog.jp/api/v2/issues/SSKTS-621/comments?apiKey=${process.env.BACKLOG_API_KEY}`,
+            form: {
+                content: text,
+                notifiedUserId: users.map((user) => user.id)
+            }
+        });
+        debug('posted to backlog.');
     });
 }
