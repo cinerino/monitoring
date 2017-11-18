@@ -20,66 +20,70 @@ const request = require("request-promise-native");
 const timers_1 = require("timers");
 const processPlaceOrder = require("./processPlaceOrder");
 const debug = createDebug('sskts-monitoring-jobs:requestPlaceOrderScenarios');
-const logs = [];
-let results = [];
-let numberOfProcesses = 0;
-const configurations = {
-    numberOfTrials: 10,
-    intervals: 1000,
+startScenarios({
+    // tslint:disable-next-line:no-magic-numbers
+    numberOfTrials: (process.argv[2] !== undefined) ? parseInt(process.argv[2], 10) : 10,
+    // tslint:disable-next-line:no-magic-numbers
+    intervals: (process.argv[3] !== undefined) ? parseInt(process.argv[3], 10) : 1000,
     apiEndpoint: process.env.SSKTS_API_ENDPOINT
-};
-const theaterCodes = ['118'];
-console.error('WEBJOBS_COMMAND_ARGUMENTS:', process.env.WEBJOBS_COMMAND_ARGUMENTS);
-console.error('argv:', process.argv);
-const timer = timers_1.setInterval(() => __awaiter(this, void 0, void 0, function* () {
-    // プロセス数が設定に達したらタイマー終了
-    if (numberOfProcesses >= configurations.numberOfTrials) {
-        clearTimeout(timer);
-        return;
+});
+function startScenarios(configurations) {
+    if (process.env.NODE_ENV === 'production') {
+        throw new Error('Cannot start scenarios on a production environment.');
     }
-    numberOfProcesses += 1;
-    const processNumber = numberOfProcesses;
-    let log = '';
-    let result;
-    const now = new Date();
-    // tslint:disable-next-line:insecure-random
-    const theaterCode = theaterCodes[Math.floor(theaterCodes.length * Math.random())];
-    try {
-        const { transaction, order, numberOfTryAuthorizeCreditCard } = yield processPlaceOrder.main(theaterCode);
-        result = {
-            processNumber: processNumber,
-            transactionId: transaction.id,
-            startDate: now.toISOString(),
-            errorMessage: '',
-            errorStack: '',
-            errorName: '',
-            errorCode: '',
-            orderNumber: order.orderNumber,
-            orderDate: order.orderDate.toString(),
-            paymentMethod: order.paymentMethods.map((paymentMethod) => paymentMethod.name).join(','),
-            paymentMethodId: order.paymentMethods.map((paymentMethod) => paymentMethod.paymentMethodId).join(','),
-            price: `${order.price.toString()} ${order.priceCurrency}`,
-            numberOfTryAuthorizeCreditCard: numberOfTryAuthorizeCreditCard.toString()
-        };
-    }
-    catch (error) {
-        result = {
-            processNumber: processNumber,
-            transactionId: '',
-            startDate: now.toISOString(),
-            errorMessage: error.message,
-            errorStack: error.stack,
-            errorName: error.name,
-            errorCode: error.code,
-            orderNumber: '',
-            orderDate: '',
-            paymentMethod: '',
-            paymentMethodId: '',
-            price: '',
-            numberOfTryAuthorizeCreditCard: ''
-        };
-    }
-    log = `
+    const logs = [];
+    const results = [];
+    let numberOfProcesses = 0;
+    const timer = timers_1.setInterval(() => __awaiter(this, void 0, void 0, function* () {
+        // プロセス数が設定に達したらタイマー終了
+        if (numberOfProcesses >= configurations.numberOfTrials) {
+            clearTimeout(timer);
+            return;
+        }
+        numberOfProcesses += 1;
+        const processNumber = numberOfProcesses;
+        let log = '';
+        let result;
+        const now = new Date();
+        const theaterCodes = ['118'];
+        // tslint:disable-next-line:insecure-random
+        const theaterCode = theaterCodes[Math.floor(theaterCodes.length * Math.random())];
+        try {
+            const { transaction, order, numberOfTryAuthorizeCreditCard } = yield processPlaceOrder.main(theaterCode);
+            result = {
+                processNumber: processNumber,
+                transactionId: transaction.id,
+                startDate: now.toISOString(),
+                errorMessage: '',
+                errorStack: '',
+                errorName: '',
+                errorCode: '',
+                orderNumber: order.orderNumber,
+                orderDate: order.orderDate.toString(),
+                paymentMethod: order.paymentMethods.map((paymentMethod) => paymentMethod.name).join(','),
+                paymentMethodId: order.paymentMethods.map((paymentMethod) => paymentMethod.paymentMethodId).join(','),
+                price: `${order.price.toString()} ${order.priceCurrency}`,
+                numberOfTryAuthorizeCreditCard: numberOfTryAuthorizeCreditCard.toString()
+            };
+        }
+        catch (error) {
+            result = {
+                processNumber: processNumber,
+                transactionId: '',
+                startDate: now.toISOString(),
+                errorMessage: error.message,
+                errorStack: error.stack,
+                errorName: error.name,
+                errorCode: error.code,
+                orderNumber: '',
+                orderDate: '',
+                paymentMethod: '',
+                paymentMethodId: '',
+                price: '',
+                numberOfTryAuthorizeCreditCard: ''
+            };
+        }
+        log = `
 =============================== Transaction result ===============================
 processNumber                    : ${result.processNumber.toString()}
 transactionId                    : ${result.transactionId}
@@ -95,19 +99,17 @@ paymentMethodId                  : ${result.paymentMethodId}
 price                            : ${result.price}
 numberOfTryAuthorizeCreditCard   : ${result.numberOfTryAuthorizeCreditCard}
 =============================== Transaction result ===============================`;
-    debug(log);
-    logs.push(log);
-    results.push(result);
-    // 全プロセスが終了したら
-    // 取引に対するタスク状態確認
-    // レポートを送信
-    if (results.length === numberOfProcesses) {
-        yield onAllProcessed();
-    }
-}), configurations.intervals);
-function onAllProcessed() {
+        debug(log);
+        logs.push(log);
+        results.push(result);
+        // 全プロセスが終了したらレポートを送信
+        if (results.length === numberOfProcesses) {
+            yield reportResults(configurations, results);
+        }
+    }), configurations.intervals);
+}
+function reportResults(configurations, results) {
     return __awaiter(this, void 0, void 0, function* () {
-        // debug('sending a report...');
         // sort result
         results = results.sort((a, b) => (a.processNumber > b.processNumber) ? 1 : -1);
         // csv作成
