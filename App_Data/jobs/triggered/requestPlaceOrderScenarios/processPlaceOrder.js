@@ -45,10 +45,19 @@ const placeOrderTransactions = sasaki.service.transaction.placeOrder({
 // tslint:disable-next-line:max-func-body-length
 function main(theaterCode) {
     return __awaiter(this, void 0, void 0, function* () {
+        // search movie theater organizations
+        const movieTheaterOrganization = yield organizations.findMovieTheaterByBranchCode({
+            branchCode: theaterCode
+        });
+        if (movieTheaterOrganization === null) {
+            throw new Error('movie theater shop not open');
+        }
         // search screening events
         const individualScreeningEvents = yield events.searchIndividualScreeningEvent({
-            theater: theaterCode,
-            day: moment().add(1, 'day').format('YYYYMMDD')
+            superEventLocationIdentifiers: [movieTheaterOrganization.identifier],
+            startFrom: moment().toDate(),
+            // tslint:disable-next-line:no-magic-numbers
+            startThrough: moment().add(2, 'day').toDate()
         });
         const availableEvents = individualScreeningEvents.filter((event) => (event.offer.availability !== null && event.offer.availability > 0));
         if (availableEvents.length === 0) {
@@ -63,13 +72,6 @@ function main(theaterCode) {
         });
         if (individualScreeningEvent === null) {
             throw new Error('specified screening event not found');
-        }
-        // search movie theater organizations
-        const movieTheaterOrganization = yield organizations.findMovieTheaterByBranchCode({
-            branchCode: individualScreeningEvent.coaInfo.theaterCode
-        });
-        if (movieTheaterOrganization === null) {
-            throw new Error('movie theater shop not open');
         }
         const dateJouei = individualScreeningEvent.coaInfo.dateJouei;
         const titleCode = individualScreeningEvent.coaInfo.titleCode;
@@ -149,13 +151,13 @@ function main(theaterCode) {
             ]
         });
         debug('seatReservationAuthorization:', seatReservationAuthorization);
+        // tslint:disable-next-line:no-magic-numbers
+        yield wait(5000);
         debug('canceling a seat reservation authorization...');
         yield placeOrderTransactions.cancelSeatReservationAuthorization({
             transactionId: transaction.id,
             actionId: seatReservationAuthorization.id
         });
-        // tslint:disable-next-line:no-magic-numbers
-        yield wait(1000);
         debug('recreating a seat reservation authorization...');
         seatReservationAuthorization = yield placeOrderTransactions.createSeatReservationAuthorization({
             transactionId: transaction.id,
@@ -249,10 +251,12 @@ function main(theaterCode) {
         //     numberOfTryAuthorizeCreditCard = result.numberOfTryAuthorizeCreditCard
         // });
         // debug('creditCardAuthorization:', creditCardAuthorization, numberOfTryAuthorizeCreditCard);
+        // tslint:disable-next-line:no-magic-numbers
+        yield wait(5000);
         debug('registering a customer contact...');
         const contact = {
-            givenName: 'John',
-            familyName: 'Smith',
+            givenName: 'たろう',
+            familyName: 'てすと',
             telephone: '09012345678',
             email: process.env.SSKTS_DEVELOPER_EMAIL
         };
@@ -263,7 +267,7 @@ function main(theaterCode) {
             debug('customer contact registered.', result);
         });
         // tslint:disable-next-line:no-magic-numbers
-        yield wait(3000);
+        yield wait(5000);
         debug('confirming a transaction...');
         const order = yield placeOrderTransactions.confirm({
             transactionId: transaction.id
@@ -309,9 +313,7 @@ function authorieCreditCardUntilSuccess(transactionId, orderIdPrefix, amount) {
         let numberOfTryAuthorizeCreditCard = 0;
         while (creditCardAuthorization === null) {
             numberOfTryAuthorizeCreditCard += 1;
-            if (numberOfTryAuthorizeCreditCard > 1) {
-                yield wait(RETRY_INTERVAL_IN_MILLISECONDS);
-            }
+            yield wait(RETRY_INTERVAL_IN_MILLISECONDS);
             try {
                 creditCardAuthorization = yield placeOrderTransactions.createCreditCardAuthorization({
                     transactionId: transactionId,

@@ -61,7 +61,7 @@ function startScenarios(configurations: IConfigurations) {
             let result;
             const now = new Date();
 
-            const theaterCodes = ['118'];
+            const theaterCodes = ['112', '118'];
             // tslint:disable-next-line:insecure-random
             const theaterCode = theaterCodes[Math.floor(theaterCodes.length * Math.random())];
 
