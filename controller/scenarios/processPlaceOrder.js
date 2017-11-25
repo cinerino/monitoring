@@ -10,15 +10,15 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 /**
- * a sample processing placeOrder transaction
- * @ignore
+ * 注文取引シナリオ
+ * @module
  */
 const sasaki = require("@motionpicture/sskts-api-nodejs-client");
 const sskts = require("@motionpicture/sskts-domain");
 const createDebug = require("debug");
 const moment = require("moment");
 const util = require("util");
-const debug = createDebug('sskts-monitoring-jobs:requestPlaceOrderScenarios');
+const debug = createDebug('sskts-monitoring-jobs');
 const auth = new sasaki.auth.ClientCredentials({
     domain: process.env.SSKTS_API_AUTHORIZE_SERVER_DOMAIN,
     clientId: process.env.SSKTS_API_CLIENT_ID,

@@ -1,8 +1,8 @@
 // tslint:disable:insecure-random
 
 /**
- * a sample processing placeOrder transaction
- * @ignore
+ * 注文取引シナリオ
+ * @module
  */
 
 import * as sasaki from '@motionpicture/sskts-api-nodejs-client';
@@ -11,7 +11,7 @@ import * as createDebug from 'debug';
 import * as moment from 'moment';
 import * as util from 'util';
 
-const debug = createDebug('sskts-monitoring-jobs:requestPlaceOrderScenarios');
+const debug = createDebug('sskts-monitoring-jobs');
 
 const auth = new sasaki.auth.ClientCredentials({
     domain: <string>process.env.SSKTS_API_AUTHORIZE_SERVER_DOMAIN,

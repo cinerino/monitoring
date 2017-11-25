@@ -1,5 +1,5 @@
 /**
- * 注文シナリオリクエストをAPIに投げる
+ * 注文シナリオリクエストを実行する
  * @ignore
  */
 
@@ -10,9 +10,9 @@ import * as moment from 'moment';
 import * as request from 'request-promise-native';
 import { setInterval } from 'timers';
 
-import * as processPlaceOrder from './processPlaceOrder';
+import * as processPlaceOrder from '../../../../controller/scenarios/processPlaceOrder';
 
-const debug = createDebug('sskts-monitoring-jobs:requestPlaceOrderScenarios');
+const debug = createDebug('sskts-monitoring-jobs');
 
 interface IConfigurations {
     /**

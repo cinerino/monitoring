@@ -1,6 +1,6 @@
 "use strict";
 /**
- * 注文シナリオリクエストをAPIに投げる
+ * 注文シナリオリクエストを実行する
  * @ignore
  */
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -18,8 +18,8 @@ const json2csv = require("json2csv");
 const moment = require("moment");
 const request = require("request-promise-native");
 const timers_1 = require("timers");
-const processPlaceOrder = require("./processPlaceOrder");
-const debug = createDebug('sskts-monitoring-jobs:requestPlaceOrderScenarios');
+const processPlaceOrder = require("../../../../controller/scenarios/processPlaceOrder");
+const debug = createDebug('sskts-monitoring-jobs');
 startScenarios({
     // tslint:disable-next-line:no-magic-numbers
     numberOfTrials: (process.argv[2] !== undefined) ? parseInt(process.argv[2], 10) : 10,
