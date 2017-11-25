@@ -83,7 +83,7 @@ function main(theaterCode, durationInMillisecond) {
         debug('starting a transaction...');
         const transaction = yield placeOrderTransactions.start({
             // tslint:disable-next-line:no-magic-numbers
-            expires: moment().add(10, 'minutes').toDate(),
+            expires: moment().add(durationInMillisecond + 120000, 'milliseconds').toDate(),
             sellerId: movieTheaterOrganization.id
         });
         // search sales tickets from sskts.COA

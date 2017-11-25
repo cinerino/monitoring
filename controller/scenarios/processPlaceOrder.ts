@@ -89,7 +89,7 @@ export async function main(theaterCode: string, durationInMillisecond: number) {
     debug('starting a transaction...');
     const transaction = await placeOrderTransactions.start({
         // tslint:disable-next-line:no-magic-numbers
-        expires: moment().add(10, 'minutes').toDate(),
+        expires: moment().add(durationInMillisecond + 120000, 'milliseconds').toDate(),
         sellerId: movieTheaterOrganization.id
     });
 
