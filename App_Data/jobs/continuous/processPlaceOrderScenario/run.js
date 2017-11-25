@@ -12,28 +12,34 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+const sskts = require("@motionpicture/sskts-domain");
 const createDebug = require("debug");
 const processPlaceOrder = require("../../../../controller/scenarios/processPlaceOrder");
+const mongooseConnectionOptions_1 = require("../../../../mongooseConnectionOptions");
 const debug = createDebug('sskts-monitoring-jobs');
-setInterval(() => {
-    if (process.env.NODE_ENV === 'production') {
-        return;
-    }
-    // 0-60秒の間でランダムにインターバルを置いてシナリオを実行する
-    // tslint:disable-next-line:insecure-random no-magic-numbers
-    const interval = Math.floor(60000 * Math.random());
-    setTimeout(() => __awaiter(this, void 0, void 0, function* () {
-        const theaterCodes = ['112', '118'];
-        // tslint:disable-next-line:insecure-random
-        const theaterCode = theaterCodes[Math.floor(theaterCodes.length * Math.random())];
-        try {
-            const result = yield processPlaceOrder.main(theaterCode);
-            debug('result:', result);
+sskts.mongoose.connect(process.env.MONGOLAB_URI, mongooseConnectionOptions_1.default);
+const organizationRepo = new sskts.repository.Organization(sskts.mongoose.connection);
+organizationRepo.searchMovieTheaters({})
+    .then((movieTheaters) => {
+    movieTheaters.forEach((movieTheater) => {
+        if (process.env.NODE_ENV === 'production') {
+            return;
         }
-        catch (error) {
-            console.error(error);
-        }
-    }), interval);
-}, 
-// tslint:disable-next-line:no-magic-numbers
-500);
+        setInterval(() => {
+            // 0-60秒の間でランダムにインターバルを置いてシナリオを実行する
+            // tslint:disable-next-line:insecure-random no-magic-numbers
+            const interval = Math.floor(60000 * Math.random());
+            setTimeout(() => __awaiter(this, void 0, void 0, function* () {
+                try {
+                    const result = yield processPlaceOrder.main(movieTheater.location.branchCode);
+                    debug('result:', result, 'movieTheater.branchCode:', movieTheater.branchCode);
+                }
+                catch (error) {
+                    console.error(error, 'movieTheater.branchCode:', movieTheater.branchCode);
+                }
+            }), interval);
+        }, 
+        // tslint:disable-next-line:no-magic-numbers
+        1000);
+    });
+});
