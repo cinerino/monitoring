@@ -41,7 +41,7 @@ const placeOrderTransactions = sasaki.service.transaction.placeOrder({
 });
 
 // tslint:disable-next-line:max-func-body-length
-export async function main(theaterCode: string) {
+export async function main(theaterCode: string, durationInMillisecond: number) {
     // search movie theater organizations
     const movieTheaterOrganization = await organizations.findMovieTheaterByBranchCode({
         branchCode: theaterCode
@@ -65,8 +65,9 @@ export async function main(theaterCode: string) {
         throw new Error('no available events');
     }
 
+    // 上映イベント選択時間
     // tslint:disable-next-line:no-magic-numbers
-    await wait(5000);
+    await wait(Math.floor(durationInMillisecond / 6));
 
     const availableEvent = availableEvents[Math.floor(availableEvents.length * Math.random())];
 
@@ -122,8 +123,9 @@ export async function main(theaterCode: string) {
         throw new Error('no available seats');
     }
 
+    // 座席選択時間
     // tslint:disable-next-line:no-magic-numbers
-    await wait(5000);
+    await wait(Math.floor(durationInMillisecond / 6));
 
     // select a seat randomly
     const selectedSeatCode = freeSeatCodes[Math.floor(freeSeatCodes.length * Math.random())];
@@ -164,8 +166,9 @@ export async function main(theaterCode: string) {
     });
     debug('seatReservationAuthorization:', seatReservationAuthorization);
 
+    // 座席再選択時間
     // tslint:disable-next-line:no-magic-numbers
-    await wait(5000);
+    await wait(Math.floor(durationInMillisecond / 6));
 
     debug('canceling a seat reservation authorization...');
     await placeOrderTransactions.cancelSeatReservationAuthorization({
@@ -206,8 +209,9 @@ export async function main(theaterCode: string) {
     });
     debug('seatReservationAuthorization:', seatReservationAuthorization);
 
+    // 券種選択時間
     // tslint:disable-next-line:no-magic-numbers
-    await wait(5000);
+    await wait(Math.floor(durationInMillisecond / 6));
 
     debug('券種を変更します...');
     // select a ticket randomly
@@ -278,8 +282,9 @@ export async function main(theaterCode: string) {
     // });
     // debug('creditCardAuthorization:', creditCardAuthorization, numberOfTryAuthorizeCreditCard);
 
+    // 購入者情報入力時間
     // tslint:disable-next-line:no-magic-numbers
-    await wait(5000);
+    await wait(Math.floor(durationInMillisecond / 6));
 
     debug('registering a customer contact...');
     const contact = {
@@ -295,8 +300,9 @@ export async function main(theaterCode: string) {
         debug('customer contact registered.', result);
     });
 
+    // 購入情報確認時間
     // tslint:disable-next-line:no-magic-numbers
-    await wait(5000);
+    await wait(Math.floor(durationInMillisecond / 6));
 
     debug('confirming a transaction...');
     const order = await placeOrderTransactions.confirm({

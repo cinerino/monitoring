@@ -29,7 +29,9 @@ organizationRepo.searchMovieTheaters({})
                     setTimeout(
                         async () => {
                             try {
-                                const result = await processPlaceOrder.main(movieTheater.location.branchCode);
+                                // tslint:disable-next-line:insecure-random no-magic-numbers
+                                const duration = Math.floor(500000 * Math.random() + 300000);
+                                const result = await processPlaceOrder.main(movieTheater.location.branchCode, duration);
                                 debug('result:', result, 'movieTheater.branchCode:', movieTheater.branchCode);
                             } catch (error) {
                                 console.error(error, 'movieTheater.branchCode:', movieTheater.branchCode);
@@ -39,7 +41,7 @@ organizationRepo.searchMovieTheaters({})
                     );
                 },
                 // tslint:disable-next-line:no-magic-numbers
-                1000
+                10000
             );
         });
     });

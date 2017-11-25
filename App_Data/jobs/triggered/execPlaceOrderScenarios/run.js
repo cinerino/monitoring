@@ -49,7 +49,9 @@ function startScenarios(configurations) {
         // tslint:disable-next-line:insecure-random
         const theaterCode = theaterCodes[Math.floor(theaterCodes.length * Math.random())];
         try {
-            const { transaction, order, numberOfTryAuthorizeCreditCard } = yield processPlaceOrder.main(theaterCode);
+            // tslint:disable-next-line:insecure-random no-magic-numbers
+            const duration = Math.floor(500000 * Math.random() + 300000);
+            const { transaction, order, numberOfTryAuthorizeCreditCard } = yield processPlaceOrder.main(theaterCode, duration);
             result = {
                 processNumber: processNumber,
                 transactionId: transaction.id,

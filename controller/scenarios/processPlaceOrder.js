@@ -43,7 +43,7 @@ const placeOrderTransactions = sasaki.service.transaction.placeOrder({
     auth: auth
 });
 // tslint:disable-next-line:max-func-body-length
-function main(theaterCode) {
+function main(theaterCode, durationInMillisecond) {
     return __awaiter(this, void 0, void 0, function* () {
         // search movie theater organizations
         const movieTheaterOrganization = yield organizations.findMovieTheaterByBranchCode({
@@ -63,8 +63,9 @@ function main(theaterCode) {
         if (availableEvents.length === 0) {
             throw new Error('no available events');
         }
+        // 上映イベント選択時間
         // tslint:disable-next-line:no-magic-numbers
-        yield wait(5000);
+        yield wait(Math.floor(durationInMillisecond / 6));
         const availableEvent = availableEvents[Math.floor(availableEvents.length * Math.random())];
         // retrieve an event detail
         const individualScreeningEvent = yield events.findIndividualScreeningEvent({
@@ -113,8 +114,9 @@ function main(theaterCode) {
         if (getStateReserveSeatResult.cntReserveFree <= 0) {
             throw new Error('no available seats');
         }
+        // 座席選択時間
         // tslint:disable-next-line:no-magic-numbers
-        yield wait(5000);
+        yield wait(Math.floor(durationInMillisecond / 6));
         // select a seat randomly
         const selectedSeatCode = freeSeatCodes[Math.floor(freeSeatCodes.length * Math.random())];
         // select a ticket randomly
@@ -151,8 +153,9 @@ function main(theaterCode) {
             ]
         });
         debug('seatReservationAuthorization:', seatReservationAuthorization);
+        // 座席再選択時間
         // tslint:disable-next-line:no-magic-numbers
-        yield wait(5000);
+        yield wait(Math.floor(durationInMillisecond / 6));
         debug('canceling a seat reservation authorization...');
         yield placeOrderTransactions.cancelSeatReservationAuthorization({
             transactionId: transaction.id,
@@ -190,8 +193,9 @@ function main(theaterCode) {
             ]
         });
         debug('seatReservationAuthorization:', seatReservationAuthorization);
+        // 券種選択時間
         // tslint:disable-next-line:no-magic-numbers
-        yield wait(5000);
+        yield wait(Math.floor(durationInMillisecond / 6));
         debug('券種を変更します...');
         // select a ticket randomly
         selectedSalesTicket = salesTicketResult[Math.floor(salesTicketResult.length * Math.random())];
@@ -251,8 +255,9 @@ function main(theaterCode) {
         //     numberOfTryAuthorizeCreditCard = result.numberOfTryAuthorizeCreditCard
         // });
         // debug('creditCardAuthorization:', creditCardAuthorization, numberOfTryAuthorizeCreditCard);
+        // 購入者情報入力時間
         // tslint:disable-next-line:no-magic-numbers
-        yield wait(5000);
+        yield wait(Math.floor(durationInMillisecond / 6));
         debug('registering a customer contact...');
         const contact = {
             givenName: 'たろう',
@@ -266,8 +271,9 @@ function main(theaterCode) {
         }).then((result) => {
             debug('customer contact registered.', result);
         });
+        // 購入情報確認時間
         // tslint:disable-next-line:no-magic-numbers
-        yield wait(5000);
+        yield wait(Math.floor(durationInMillisecond / 6));
         debug('confirming a transaction...');
         const order = yield placeOrderTransactions.confirm({
             transactionId: transaction.id
