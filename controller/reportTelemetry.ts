@@ -23,7 +23,8 @@ const defaultParams = {
     chxs: '0,a1a6a9,12|1,a1a6a9,12|2,a1a6a9,12'
 };
 
-type ITelemetry = sskts.service.report.ITelemetry;
+type ITelemetryGlobal = sskts.service.report.ITelemetryGlobal;
+type ITelemetrySeller = sskts.service.report.ITelemetrySeller;
 
 // tslint:disable-next-line:max-func-body-length
 export async function main() {
@@ -41,29 +42,47 @@ export async function main() {
     const measuredFrom = moment(dateNowByUnitTime).add(numberOfAggregationUnit * -telemetryUnitTimeInSeconds, 'seconds');
 
     debug('reporting telemetries measuredFrom - dateTo...', measuredFrom, dateNowByUnitTime);
+    const organizationRepo = new sskts.repository.Organization(sskts.mongoose.connection);
     const telemetryRepo = new sskts.repository.Telemetry(sskts.mongoose.connection);
-    const telemetries = await sskts.service.report.searchTelemetries({
+
+    const movieTheaters = await organizationRepo.searchMovieTheaters({});
+
+    const globalTelemetries = <sskts.service.report.ITelemetryGlobal[]>await sskts.service.report.searchTelemetries({
         measuredFrom: measuredFrom.toDate(),
-        measuredThrough: dateNowByUnitTime.toDate()
+        measuredThrough: dateNowByUnitTime.toDate(),
+        scope: sskts.service.report.TelemetryScope.Global
     })(telemetryRepo);
-    debug('telemetries length:', telemetries.length);
+    debug('globalTelemetries length:', globalTelemetries.length);
+
+    const sellerTelemetries = <sskts.service.report.ITelemetrySeller[]>await sskts.service.report.searchTelemetries({
+        measuredFrom: measuredFrom.toDate(),
+        measuredThrough: dateNowByUnitTime.toDate(),
+        scope: sskts.service.report.TelemetryScope.Seller
+    })(telemetryRepo);
+    debug('sellerTelemetries length:', sellerTelemetries.length);
 
     sskts.mongoose.disconnect();
 
-    await reportLatenciesOfTasks(telemetries); // タスク待機時間
-    await reportNumberOfTrialsOfTasks(telemetries); // タスク試行回数
-    await reportNumberOfTransactionsByStatuses(telemetries); // ステータスごとの取引数
-    await reportTransactionRequiredTimes(telemetries); // 平均所要時間
-    await reportTransactionAmounts(telemetries); // 平均金額
-    await reportTransactionActions(telemetries); // 平均アクション数
-    await reportNumberOfTransactionsUnderway(telemetries);
-    await reportNumberOfTasksUnexecuted(telemetries);
+    await reportLatenciesOfTasks(globalTelemetries); // タスク待機時間
+    await reportNumberOfTrialsOfTasks(globalTelemetries); // タスク試行回数
+    await reportNumberOfTasksUnexecuted(globalTelemetries);
+
+    // 販売者ごとにレポート送信
+    await Promise.all(movieTheaters.map(async (movieTheater) => {
+        debug('reporting...seller:', movieTheater.id);
+        const telemetriesBySellerId = sellerTelemetries.filter((telemetry) => telemetry.object.sellerId === movieTheater.id);
+        await reportNumberOfTransactionsByStatuses(movieTheater.name.ja, telemetriesBySellerId); // ステータスごとの取引数
+        await reportTransactionRequiredTimes(movieTheater.name.ja, telemetriesBySellerId); // 平均所要時間
+        await reportTransactionAmounts(movieTheater.name.ja, telemetriesBySellerId); // 平均金額
+        await reportTransactionActions(movieTheater.name.ja, telemetriesBySellerId); // 平均アクション数
+        await reportNumberOfTransactionsUnderway(movieTheater.name.ja, telemetriesBySellerId);
+    }));
 }
 
 /**
  * タスク実行試行回数を報告する
  */
-async function reportNumberOfTrialsOfTasks(telemetries: ITelemetry[]) {
+async function reportNumberOfTrialsOfTasks(telemetries: ITelemetryGlobal[]) {
     const params = {
         ...defaultParams, ...{
             chco: '79F67D,79CCF5,E96C6C',
@@ -76,18 +95,18 @@ async function reportNumberOfTrialsOfTasks(telemetries: ITelemetry[]) {
     };
     params.chd += telemetries.map(
         (telemetry) => {
-            return (telemetry.flow.tasks !== undefined && telemetry.flow.tasks.numberOfExecuted > 0)
-                ? Math.floor(telemetry.flow.tasks.totalNumberOfTrials / telemetry.flow.tasks.numberOfExecuted)
+            return (telemetry.result.flow.tasks !== undefined && telemetry.result.flow.tasks.numberOfExecuted > 0)
+                ? Math.floor(telemetry.result.flow.tasks.totalNumberOfTrials / telemetry.result.flow.tasks.numberOfExecuted)
                 : 0;
         }
     ).join(',');
     // tslint:disable-next-line:prefer-template
     params.chd += '|' + telemetries.map(
-        (telemetry) => (telemetry.flow.tasks !== undefined) ? telemetry.flow.tasks.maxNumberOfTrials : 0
+        (telemetry) => (telemetry.result.flow.tasks !== undefined) ? telemetry.result.flow.tasks.maxNumberOfTrials : 0
     ).join(',');
     // tslint:disable-next-line:prefer-template
     params.chd += '|' + telemetries.map(
-        (telemetry) => (telemetry.flow.tasks !== undefined) ? telemetry.flow.tasks.minNumberOfTrials : 0
+        (telemetry) => (telemetry.result.flow.tasks !== undefined) ? telemetry.result.flow.tasks.minNumberOfTrials : 0
     ).join(',');
     const imageFullsize = await publishUrl(params);
     debug('imageFullsize:', imageFullsize);
@@ -103,7 +122,7 @@ async function reportNumberOfTrialsOfTasks(telemetries: ITelemetry[]) {
 /**
  * タスク待ち時間を報告する
  */
-async function reportLatenciesOfTasks(telemetries: ITelemetry[]) {
+async function reportLatenciesOfTasks(telemetries: ITelemetryGlobal[]) {
     const params = {
         ...defaultParams, ...{
             chco: '79F67D,79CCF5,E96C6C',
@@ -116,18 +135,28 @@ async function reportLatenciesOfTasks(telemetries: ITelemetry[]) {
     };
     params.chd += telemetries.map(
         (telemetry) => {
-            return (telemetry.flow.tasks !== undefined && telemetry.flow.tasks.numberOfExecuted > 0)
-                ? Math.floor(telemetry.flow.tasks.totalLatencyInMilliseconds / telemetry.flow.tasks.numberOfExecuted / KILOSECONDS)
+            const result = telemetry.result;
+
+            return (result.flow.tasks !== undefined && result.flow.tasks.numberOfExecuted > 0)
+                ? Math.floor(result.flow.tasks.totalLatencyInMilliseconds / result.flow.tasks.numberOfExecuted / KILOSECONDS)
                 : 0;
         }
     ).join(',');
     // tslint:disable-next-line:prefer-template
     params.chd += '|' + telemetries.map(
-        (telemetry) => (telemetry.flow.tasks !== undefined) ? Math.floor(telemetry.flow.tasks.maxLatencyInMilliseconds / KILOSECONDS) : 0
+        (telemetry) => {
+            return (telemetry.result.flow.tasks !== undefined)
+                ? Math.floor(telemetry.result.flow.tasks.maxLatencyInMilliseconds / KILOSECONDS)
+                : 0;
+        }
     ).join(',');
     // tslint:disable-next-line:prefer-template
     params.chd += '|' + telemetries.map(
-        (telemetry) => (telemetry.flow.tasks !== undefined) ? Math.floor(telemetry.flow.tasks.minLatencyInMilliseconds / KILOSECONDS) : 0
+        (telemetry) => {
+            return (telemetry.result.flow.tasks !== undefined)
+                ? Math.floor(telemetry.result.flow.tasks.minLatencyInMilliseconds / KILOSECONDS)
+                : 0;
+        }
     ).join(',');
     const imageFullsize = await publishUrl(params);
     debug('imageFullsize:', imageFullsize);
@@ -143,7 +172,7 @@ async function reportLatenciesOfTasks(telemetries: ITelemetry[]) {
 /**
  * 状態別の取引数を報告する
  */
-async function reportNumberOfTransactionsByStatuses(telemetries: ITelemetry[]) {
+async function reportNumberOfTransactionsByStatuses(sellerName: string, telemetries: ITelemetrySeller[]) {
     const params = {
         ...defaultParams, ...{
             chco: '79F67D,79CCF5,E96C6C',
@@ -154,14 +183,14 @@ async function reportNumberOfTransactionsByStatuses(telemetries: ITelemetry[]) {
             chs: '750x250'
         }
     };
-    params.chd += telemetries.map((telemetry) => telemetry.flow.transactions.numberOfStarted).join(',');
-    params.chd += `|${telemetries.map((telemetry) => telemetry.flow.transactions.numberOfConfirmed).join(',')}`;
-    params.chd += `|${telemetries.map((telemetry) => telemetry.flow.transactions.numberOfExpired).join(',')}`;
+    params.chd += telemetries.map((telemetry) => telemetry.result.flow.transactions.numberOfStarted).join(',');
+    params.chd += `|${telemetries.map((telemetry) => telemetry.result.flow.transactions.numberOfConfirmed).join(',')}`;
+    params.chd += `|${telemetries.map((telemetry) => telemetry.result.flow.transactions.numberOfExpired).join(',')}`;
     const imageFullsize = await publishUrl(params);
     debug('imageFullsize:', imageFullsize);
 
     await sskts.service.notification.report2developers(
-        '開始取引数/minute 成立取引数/minute 離脱取引数/minute',
+        `[${sellerName}] 開始取引数/minute 成立取引数/minute 離脱取引数/minute`,
         '',
         imageFullsize,
         imageFullsize
@@ -171,7 +200,7 @@ async function reportNumberOfTransactionsByStatuses(telemetries: ITelemetry[]) {
 /**
  * 取引所要時間を報告する
  */
-async function reportTransactionRequiredTimes(telemetries: ITelemetry[]) {
+async function reportTransactionRequiredTimes(sellerName: string, telemetries: ITelemetrySeller[]) {
     const params = {
         ...defaultParams, ...{
             chco: 'DAA8F5',
@@ -183,13 +212,13 @@ async function reportTransactionRequiredTimes(telemetries: ITelemetry[]) {
         }
     };
     params.chd += telemetries.map(
-        (telemetry) => Math.floor(telemetry.flow.transactions.averageRequiredTimeInMilliseconds / KILOSECONDS) // ミリ秒→秒変換
+        (telemetry) => Math.floor(telemetry.result.flow.transactions.averageRequiredTimeInMilliseconds / KILOSECONDS) // ミリ秒→秒変換
     ).join(',');
     const imageFullsize = await publishUrl(params);
     debug('imageFullsize:', imageFullsize);
 
     await sskts.service.notification.report2developers(
-        '取引所要時間平均値(秒)',
+        `[${sellerName}] 取引所要時間平均値(秒)`,
         '',
         imageFullsize,
         imageFullsize
@@ -199,7 +228,7 @@ async function reportTransactionRequiredTimes(telemetries: ITelemetry[]) {
 /**
  * 取引金額を報告する
  */
-async function reportTransactionAmounts(telemetries: ITelemetry[]) {
+async function reportTransactionAmounts(sellerName: string, telemetries: ITelemetrySeller[]) {
     const params = {
         ...defaultParams, ...{
             chco: 'DAA8F5',
@@ -211,13 +240,13 @@ async function reportTransactionAmounts(telemetries: ITelemetry[]) {
         }
     };
     params.chd += telemetries.map(
-        (telemetry) => telemetry.flow.transactions.averageAmount
+        (telemetry) => telemetry.result.flow.transactions.averageAmount
     ).join(',');
     const imageFullsize = await publishUrl(params);
     debug('imageFullsize:', imageFullsize);
 
     await sskts.service.notification.report2developers(
-        '取引金額平均値/minute',
+        `[${sellerName}] 取引金額平均値/minute`,
         '',
         imageFullsize,
         imageFullsize
@@ -227,7 +256,7 @@ async function reportTransactionAmounts(telemetries: ITelemetry[]) {
 /**
  * 取引アクション数を報告する
  */
-async function reportTransactionActions(telemetries: ITelemetry[]) {
+async function reportTransactionActions(sellerName: string, telemetries: ITelemetrySeller[]) {
     const params = {
         ...defaultParams, ...{
             chco: '79CCF5,E96C6C',
@@ -238,13 +267,13 @@ async function reportTransactionActions(telemetries: ITelemetry[]) {
             chs: '750x250'
         }
     };
-    params.chd += telemetries.map((telemetry) => telemetry.flow.transactions.averageNumberOfActionsOnConfirmed).join(',');
-    params.chd += `|${telemetries.map((telemetry) => telemetry.flow.transactions.averageNumberOfActionsOnExpired).join(',')}`;
+    params.chd += telemetries.map((telemetry) => telemetry.result.flow.transactions.averageNumberOfActionsOnConfirmed).join(',');
+    params.chd += `|${telemetries.map((telemetry) => telemetry.result.flow.transactions.averageNumberOfActionsOnExpired).join(',')}`;
     const imageFullsize = await publishUrl(params);
     debug('imageFullsize:', imageFullsize);
 
     await sskts.service.notification.report2developers(
-        '取引アクション数平均値/minute',
+        `[${sellerName}] 取引アクション数平均値/minute`,
         '',
         imageFullsize,
         imageFullsize
@@ -254,7 +283,7 @@ async function reportTransactionActions(telemetries: ITelemetry[]) {
 /**
  * 進行中取引数を報告する
  */
-async function reportNumberOfTransactionsUnderway(telemetries: ITelemetry[]) {
+async function reportNumberOfTransactionsUnderway(sellerName: string, telemetries: ITelemetrySeller[]) {
     const params = {
         ...defaultParams, ...{
             chco: 'DAA8F5',
@@ -265,11 +294,11 @@ async function reportNumberOfTransactionsUnderway(telemetries: ITelemetry[]) {
             chs: '750x250'
         }
     };
-    params.chd += telemetries.map((telemetry) => telemetry.stock.transactions.numberOfUnderway).join(',');
+    params.chd += telemetries.map((telemetry) => telemetry.result.stock.transactions.numberOfUnderway).join(',');
     const imageFullsize = await publishUrl(params);
 
     await sskts.service.notification.report2developers(
-        '時点での進行中取引数',
+        `[${sellerName}] 時点での進行中取引数`,
         '',
         imageFullsize,
         imageFullsize
@@ -279,7 +308,7 @@ async function reportNumberOfTransactionsUnderway(telemetries: ITelemetry[]) {
 /**
  * 未実行タスク数を報告する
  */
-async function reportNumberOfTasksUnexecuted(telemetries: ITelemetry[]) {
+async function reportNumberOfTasksUnexecuted(telemetries: ITelemetryGlobal[]) {
     const params = {
         ...defaultParams, ...{
             chco: 'DAA8F5',
@@ -291,7 +320,7 @@ async function reportNumberOfTasksUnexecuted(telemetries: ITelemetry[]) {
         }
     };
     params.chd += telemetries.map(
-        (telemetry) => (telemetry.stock.tasks !== undefined) ? telemetry.stock.tasks.numberOfUnexecuted : 0
+        (telemetry) => (telemetry.result.stock.tasks !== undefined) ? telemetry.result.stock.tasks.numberOfUnexecuted : 0
     ).join(',');
     const imageFullsize = await publishUrl(params);
 

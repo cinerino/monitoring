@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - 注文シナリオリクエストをAPIに投げるジョブを追加。
 
 ### Changed
+- 測定データをグローバルスコープと販売者スコープに判別。
 
 ### Deprecated
 

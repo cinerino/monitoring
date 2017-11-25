@@ -1,5 +1,5 @@
 /**
- * 測定データを作成する
+ * グローバル測定データを作成する
  * @ignore
  */
 
@@ -25,7 +25,9 @@ export async function main() {
     // tslint:disable-next-line:no-magic-numbers
     const measuredAt = moment.unix((dateNow.unix() - (dateNow.unix() % 60)));
 
-    await sskts.service.report.createTelemetry(measuredAt.toDate())
+    await sskts.service.report.createTelemetry({
+        measuredAt: measuredAt.toDate()
+    })
         (taskRepo, telemetryRepo, transactionRepo, authorizeActionRepo);
 
     sskts.mongoose.disconnect();

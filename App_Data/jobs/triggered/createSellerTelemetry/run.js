@@ -1,6 +1,6 @@
 "use strict";
 /**
- * 測定データを作成する
+ * 販売者向け測定データを作成する
  * @ignore
  */
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -16,11 +16,12 @@ const sskts = require("@motionpicture/sskts-domain");
 const createDebug = require("debug");
 const moment = require("moment");
 const mongooseConnectionOptions_1 = require("../../../../mongooseConnectionOptions");
-const debug = createDebug('sskts-monitoring-jobs:createTelemetry');
+const debug = createDebug('sskts-monitoring-jobs');
 function main() {
     return __awaiter(this, void 0, void 0, function* () {
         debug('connecting mongodb...');
         sskts.mongoose.connect(process.env.MONGOLAB_URI, mongooseConnectionOptions_1.default);
+        const organizationRepo = new sskts.repository.Organization(sskts.mongoose.connection);
         const taskRepo = new sskts.repository.Task(sskts.mongoose.connection);
         const telemetryRepo = new sskts.repository.Telemetry(sskts.mongoose.connection);
         const transactionRepo = new sskts.repository.Transaction(sskts.mongoose.connection);
@@ -29,7 +30,14 @@ function main() {
         const dateNow = moment();
         // tslint:disable-next-line:no-magic-numbers
         const measuredAt = moment.unix((dateNow.unix() - (dateNow.unix() % 60)));
-        yield sskts.service.report.createTelemetry(measuredAt.toDate())(taskRepo, telemetryRepo, transactionRepo, authorizeActionRepo);
+        // 劇場組織ごとに販売者向け測定データを作成する
+        const movieTheaters = yield organizationRepo.searchMovieTheaters({});
+        yield Promise.all(movieTheaters.map((movieTheater) => __awaiter(this, void 0, void 0, function* () {
+            yield sskts.service.report.createTelemetry({
+                measuredAt: measuredAt.toDate(),
+                sellerId: movieTheater.id
+            })(taskRepo, telemetryRepo, transactionRepo, authorizeActionRepo);
+        })));
         sskts.mongoose.disconnect();
     });
 }
