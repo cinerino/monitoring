@@ -22,7 +22,9 @@ export async function main() {
     const authorizeActionRepo = new sskts.repository.action.Authorize(sskts.mongoose.connection);
     debug('creating telemetry...');
 
-    const dateNow = moment();
+    // 取引セッション時間に対して十分に時間を置いて計測する
+    // tslint:disable-next-line:no-magic-numbers
+    const dateNow = moment().add(-30, 'minutes');
     // tslint:disable-next-line:no-magic-numbers
     const measuredAt = moment.unix((dateNow.unix() - (dateNow.unix() % 60)));
 

@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 ### Added
 - 注文シナリオリクエストをAPIに投げるジョブを追加。
 - 本番以外の環境において、継続的に注文シナリオを実行するジョブを追加。
+- 取引成立率の報告を追加。
 
 ### Changed
 - 測定データをグローバルスコープと販売者スコープに判別。

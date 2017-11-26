@@ -34,7 +34,8 @@ export async function main() {
     // 集計単位数分の集計を行う
     const telemetryUnitTimeInSeconds = 60; // 集計単位時間(秒)
     const numberOfAggregationUnit = 720; // 集計単位数
-    const dateNow = moment();
+    // tslint:disable-next-line:no-magic-numbers
+    const dateNow = moment().add(-30, 'minutes');
     const dateNowByUnitTime = moment.unix(dateNow.unix() - (dateNow.unix() % telemetryUnitTimeInSeconds));
 
     // 基本的に、集計は別のジョブでやっておいて、この報告ジョブでは取得して表示するだけのイメージ
@@ -72,6 +73,7 @@ export async function main() {
         debug('reporting...seller:', movieTheater.id);
         const telemetriesBySellerId = sellerTelemetries.filter((telemetry) => telemetry.object.sellerId === movieTheater.id);
         await reportNumberOfTransactionsByStatuses(movieTheater.name.ja, telemetriesBySellerId); // ステータスごとの取引数
+        await reportConfirmedRatio(movieTheater.name.ja, telemetriesBySellerId);
         await reportTransactionRequiredTimes(movieTheater.name.ja, telemetriesBySellerId); // 平均所要時間
         await reportTransactionAmounts(movieTheater.name.ja, telemetriesBySellerId); // 平均金額
         await reportTransactionActions(movieTheater.name.ja, telemetriesBySellerId); // 平均アクション数
@@ -191,6 +193,41 @@ async function reportNumberOfTransactionsByStatuses(sellerName: string, telemetr
 
     await sskts.service.notification.report2developers(
         `[${sellerName}] 開始取引数/minute 成立取引数/minute 離脱取引数/minute`,
+        '',
+        imageFullsize,
+        imageFullsize
+    )();
+}
+
+/**
+ * 取引成立率を報告する
+ */
+async function reportConfirmedRatio(sellerName: string, telemetries: ITelemetrySeller[]) {
+    const params = {
+        ...defaultParams, ...{
+            chco: 'DAA8F5',
+            chxt: 'x,y',
+            chd: 't:',
+            chxl: '0:|12時間前|9時間前|6時間前|3時間前|0時間前|2:|個',
+            chdl: '取引成立率',
+            chs: '750x250'
+        }
+    };
+    params.chd += telemetries.map(
+        (telemetry) => {
+            const data = telemetry.result.flow.transactions;
+
+            return (data.numberOfStartedAndConfirmed > 0 && data.numberOfStarted > 0)
+                // tslint:disable-next-line:no-magic-numbers
+                ? Math.floor(100 * data.numberOfStartedAndConfirmed / data.numberOfStarted)
+                : 0;
+        }
+    ).join(',');
+    const imageFullsize = await publishUrl(params);
+    debug('imageFullsize:', imageFullsize);
+
+    await sskts.service.notification.report2developers(
+        `[${sellerName}] 取引成立率`,
         '',
         imageFullsize,
         imageFullsize
