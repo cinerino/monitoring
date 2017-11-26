@@ -57,7 +57,7 @@ function main(theaterCode, durationInMillisecond) {
             superEventLocationIdentifiers: [movieTheaterOrganization.identifier],
             startFrom: moment().toDate(),
             // tslint:disable-next-line:no-magic-numbers
-            startThrough: moment().add(2, 'day').toDate()
+            startThrough: moment().add(2, 'days').toDate()
         });
         const availableEvents = individualScreeningEvents.filter((event) => (event.offer.availability !== null && event.offer.availability > 0));
         if (availableEvents.length === 0) {

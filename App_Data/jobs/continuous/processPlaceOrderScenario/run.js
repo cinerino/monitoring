@@ -42,6 +42,6 @@ organizationRepo.searchMovieTheaters({})
             }), interval);
         }, 
         // tslint:disable-next-line:no-magic-numbers
-        10000);
+        60000);
     });
 });
