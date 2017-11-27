@@ -1,11 +1,11 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 /**
- * GMO実売上状況を報告する
+ * 測定データ報告
  * @ignore
  */
 const createDebug = require("debug");
-const Controller = require("../../../../controller/reportGMOSales");
+const Controller = require("../../../../controller/reportFlowTelemetry");
 const debug = createDebug('sskts-monitoring-jobs');
 Controller.main().then(() => {
     debug('success!');

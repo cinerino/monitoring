@@ -17,7 +17,7 @@ const createDebug = require("debug");
 const moment = require("moment");
 const request = require("request-promise-native");
 const mongooseConnectionOptions_1 = require("../mongooseConnectionOptions");
-const debug = createDebug('sskts-monitoring-jobs:controller:createTelemetry');
+const debug = createDebug('sskts-monitoring-jobs');
 const KILOSECONDS = 1000;
 const defaultParams = {
     chco: 'DAA8F5',
@@ -47,22 +47,19 @@ function main() {
         const organizationRepo = new sskts.repository.Organization(sskts.mongoose.connection);
         const telemetryRepo = new sskts.repository.Telemetry(sskts.mongoose.connection);
         const movieTheaters = yield organizationRepo.searchMovieTheaters({});
-        const globalTelemetries = yield sskts.service.report.searchTelemetries({
+        const globalTelemetries = yield sskts.service.report.telemetry.searchGlobalFlow({
             measuredFrom: measuredFrom.toDate(),
-            measuredThrough: dateNowByUnitTime.toDate(),
-            scope: sskts.service.report.TelemetryScope.Global
+            measuredThrough: dateNowByUnitTime.toDate()
         })(telemetryRepo);
         debug('globalTelemetries length:', globalTelemetries.length);
-        const sellerTelemetries = yield sskts.service.report.searchTelemetries({
+        const sellerTelemetries = yield sskts.service.report.telemetry.searchSellerFlow({
             measuredFrom: measuredFrom.toDate(),
-            measuredThrough: dateNowByUnitTime.toDate(),
-            scope: sskts.service.report.TelemetryScope.Seller
+            measuredThrough: dateNowByUnitTime.toDate()
         })(telemetryRepo);
         debug('sellerTelemetries length:', sellerTelemetries.length);
         sskts.mongoose.disconnect();
         yield reportLatenciesOfTasks(globalTelemetries); // タスク待機時間
         yield reportNumberOfTrialsOfTasks(globalTelemetries); // タスク試行回数
-        yield reportNumberOfTasksUnexecuted(globalTelemetries);
         // 販売者ごとにレポート送信
         yield Promise.all(movieTheaters.map((movieTheater) => __awaiter(this, void 0, void 0, function* () {
             debug('reporting...seller:', movieTheater.id);
@@ -73,7 +70,6 @@ function main() {
             yield reportTransactionRequiredTimes(movieTheater.name.ja, telemetriesBySellerId); // 平均所要時間
             yield reportTransactionAmounts(movieTheater.name.ja, telemetriesBySellerId); // 平均金額
             yield reportTransactionActions(movieTheater.name.ja, telemetriesBySellerId); // 平均アクション数
-            yield reportNumberOfTransactionsUnderway(movieTheater.name.ja, telemetriesBySellerId);
         })));
     });
 }
@@ -92,14 +88,14 @@ function reportNumberOfTrialsOfTasks(telemetries) {
             chs: '750x250'
         });
         params.chd += telemetries.map((telemetry) => {
-            return (telemetry.result.flow.tasks !== undefined && telemetry.result.flow.tasks.numberOfExecuted > 0)
-                ? Math.floor(telemetry.result.flow.tasks.totalNumberOfTrials / telemetry.result.flow.tasks.numberOfExecuted)
+            return (telemetry.result.tasks !== undefined && telemetry.result.tasks.numberOfExecuted > 0)
+                ? Math.floor(telemetry.result.tasks.totalNumberOfTrials / telemetry.result.tasks.numberOfExecuted)
                 : 0;
         }).join(',');
         // tslint:disable-next-line:prefer-template
-        params.chd += '|' + telemetries.map((telemetry) => (telemetry.result.flow.tasks !== undefined) ? telemetry.result.flow.tasks.maxNumberOfTrials : 0).join(',');
+        params.chd += '|' + telemetries.map((telemetry) => (telemetry.result.tasks !== undefined) ? telemetry.result.tasks.maxNumberOfTrials : 0).join(',');
         // tslint:disable-next-line:prefer-template
-        params.chd += '|' + telemetries.map((telemetry) => (telemetry.result.flow.tasks !== undefined) ? telemetry.result.flow.tasks.minNumberOfTrials : 0).join(',');
+        params.chd += '|' + telemetries.map((telemetry) => (telemetry.result.tasks !== undefined) ? telemetry.result.tasks.minNumberOfTrials : 0).join(',');
         const imageFullsize = yield publishUrl(params);
         debug('imageFullsize:', imageFullsize);
         yield sskts.service.notification.report2developers('タスク実行試行回数', '', imageFullsize, imageFullsize)();
@@ -120,20 +116,20 @@ function reportLatenciesOfTasks(telemetries) {
         });
         params.chd += telemetries.map((telemetry) => {
             const result = telemetry.result;
-            return (result.flow.tasks !== undefined && result.flow.tasks.numberOfExecuted > 0)
-                ? Math.floor(result.flow.tasks.totalLatencyInMilliseconds / result.flow.tasks.numberOfExecuted / KILOSECONDS)
+            return (result.tasks !== undefined && result.tasks.numberOfExecuted > 0)
+                ? Math.floor(result.tasks.totalLatencyInMilliseconds / result.tasks.numberOfExecuted / KILOSECONDS)
                 : 0;
         }).join(',');
         // tslint:disable-next-line:prefer-template
         params.chd += '|' + telemetries.map((telemetry) => {
-            return (telemetry.result.flow.tasks !== undefined)
-                ? Math.floor(telemetry.result.flow.tasks.maxLatencyInMilliseconds / KILOSECONDS)
+            return (telemetry.result.tasks !== undefined)
+                ? Math.floor(telemetry.result.tasks.maxLatencyInMilliseconds / KILOSECONDS)
                 : 0;
         }).join(',');
         // tslint:disable-next-line:prefer-template
         params.chd += '|' + telemetries.map((telemetry) => {
-            return (telemetry.result.flow.tasks !== undefined)
-                ? Math.floor(telemetry.result.flow.tasks.minLatencyInMilliseconds / KILOSECONDS)
+            return (telemetry.result.tasks !== undefined)
+                ? Math.floor(telemetry.result.tasks.minLatencyInMilliseconds / KILOSECONDS)
                 : 0;
         }).join(',');
         const imageFullsize = yield publishUrl(params);
@@ -154,9 +150,9 @@ function reportNumberOfTransactionsByStatuses(sellerName, telemetries) {
             chdl: '開始|成立|離脱',
             chs: '750x250'
         });
-        params.chd += telemetries.map((telemetry) => telemetry.result.flow.transactions.numberOfStarted).join(',');
-        params.chd += `|${telemetries.map((telemetry) => telemetry.result.flow.transactions.numberOfConfirmed).join(',')}`;
-        params.chd += `|${telemetries.map((telemetry) => telemetry.result.flow.transactions.numberOfExpired).join(',')}`;
+        params.chd += telemetries.map((telemetry) => telemetry.result.transactions.numberOfStarted).join(',');
+        params.chd += `|${telemetries.map((telemetry) => telemetry.result.transactions.numberOfConfirmed).join(',')}`;
+        params.chd += `|${telemetries.map((telemetry) => telemetry.result.transactions.numberOfExpired).join(',')}`;
         const imageFullsize = yield publishUrl(params);
         debug('imageFullsize:', imageFullsize);
         yield sskts.service.notification.report2developers(`${sellerName}\n分あたりの開始取引数\n分あたりの成立取引数\n分あたりの離脱取引数`, '', imageFullsize, imageFullsize)();
@@ -176,7 +172,7 @@ function reportConfirmedRatio(sellerName, telemetries) {
             chs: '750x250'
         });
         params.chd += telemetries.map((telemetry) => {
-            const data = telemetry.result.flow.transactions;
+            const data = telemetry.result.transactions;
             return (data.numberOfStartedAndConfirmed > 0 && data.numberOfStarted > 0)
                 // tslint:disable-next-line:no-magic-numbers
                 ? Math.floor(100 * data.numberOfStartedAndConfirmed / data.numberOfStarted)
@@ -201,11 +197,11 @@ function reportTimeLeftUntilEvent(sellerName, telemetries) {
             chs: '750x250'
         });
         const HOUR_IN_MILLISECONDS = 3600000;
-        params.chd += telemetries.map((telemetry) => Math.floor(telemetry.result.flow.transactions.maxTimeLeftUntilEventInMilliseconds / HOUR_IN_MILLISECONDS)).join(',');
+        params.chd += telemetries.map((telemetry) => Math.floor(telemetry.result.transactions.maxTimeLeftUntilEventInMilliseconds / HOUR_IN_MILLISECONDS)).join(',');
         // tslint:disable-next-line:prefer-template
-        params.chd += '|' + telemetries.map((telemetry) => Math.floor(telemetry.result.flow.transactions.averageTimeLeftUntilEventInMilliseconds / HOUR_IN_MILLISECONDS)).join(',');
+        params.chd += '|' + telemetries.map((telemetry) => Math.floor(telemetry.result.transactions.averageTimeLeftUntilEventInMilliseconds / HOUR_IN_MILLISECONDS)).join(',');
         // tslint:disable-next-line:prefer-template
-        params.chd += '|' + telemetries.map((telemetry) => Math.floor(telemetry.result.flow.transactions.minTimeLeftUntilEventInMilliseconds / HOUR_IN_MILLISECONDS)).join(',');
+        params.chd += '|' + telemetries.map((telemetry) => Math.floor(telemetry.result.transactions.minTimeLeftUntilEventInMilliseconds / HOUR_IN_MILLISECONDS)).join(',');
         const imageFullsize = yield publishUrl(params);
         debug('imageFullsize:', imageFullsize);
         yield sskts.service.notification.report2developers(`${sellerName}\n何時間前に予約したか`, '', imageFullsize, imageFullsize)();
@@ -224,7 +220,7 @@ function reportTransactionRequiredTimes(sellerName, telemetries) {
             chdl: '所要時間',
             chs: '750x250'
         });
-        params.chd += telemetries.map((telemetry) => Math.floor(telemetry.result.flow.transactions.averageRequiredTimeInMilliseconds / KILOSECONDS) // ミリ秒→秒変換
+        params.chd += telemetries.map((telemetry) => Math.floor(telemetry.result.transactions.averageRequiredTimeInMilliseconds / KILOSECONDS) // ミリ秒→秒変換
         ).join(',');
         const imageFullsize = yield publishUrl(params);
         debug('imageFullsize:', imageFullsize);
@@ -244,7 +240,7 @@ function reportTransactionAmounts(sellerName, telemetries) {
             chdl: '金額',
             chs: '750x250'
         });
-        params.chd += telemetries.map((telemetry) => telemetry.result.flow.transactions.averageAmount).join(',');
+        params.chd += telemetries.map((telemetry) => telemetry.result.transactions.averageAmount).join(',');
         const imageFullsize = yield publishUrl(params);
         debug('imageFullsize:', imageFullsize);
         yield sskts.service.notification.report2developers(`${sellerName}\n分ごとの平均取引金額`, '', imageFullsize, imageFullsize)();
@@ -263,47 +259,11 @@ function reportTransactionActions(sellerName, telemetries) {
             chdl: '成立|離脱',
             chs: '750x250'
         });
-        params.chd += telemetries.map((telemetry) => telemetry.result.flow.transactions.averageNumberOfActionsOnConfirmed).join(',');
-        params.chd += `|${telemetries.map((telemetry) => telemetry.result.flow.transactions.averageNumberOfActionsOnExpired).join(',')}`;
+        params.chd += telemetries.map((telemetry) => telemetry.result.transactions.averageNumberOfActionsOnConfirmed).join(',');
+        params.chd += `|${telemetries.map((telemetry) => telemetry.result.transactions.averageNumberOfActionsOnExpired).join(',')}`;
         const imageFullsize = yield publishUrl(params);
         debug('imageFullsize:', imageFullsize);
         yield sskts.service.notification.report2developers(`${sellerName}\n分ごとの平均取引承認アクション数`, '', imageFullsize, imageFullsize)();
-    });
-}
-/**
- * 進行中取引数を報告する
- */
-function reportNumberOfTransactionsUnderway(sellerName, telemetries) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const params = Object.assign({}, defaultParams, {
-            chco: 'DAA8F5',
-            chxt: 'x,y',
-            chd: 't:',
-            chxl: '0:|12時間前|9時間前|6時間前|3時間前|0時間前',
-            chdl: '進行取引',
-            chs: '750x250'
-        });
-        params.chd += telemetries.map((telemetry) => telemetry.result.stock.transactions.numberOfUnderway).join(',');
-        const imageFullsize = yield publishUrl(params);
-        yield sskts.service.notification.report2developers(`${sellerName}\n時点での進行中取引数`, '', imageFullsize, imageFullsize)();
-    });
-}
-/**
- * 未実行タスク数を報告する
- */
-function reportNumberOfTasksUnexecuted(telemetries) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const params = Object.assign({}, defaultParams, {
-            chco: 'DAA8F5',
-            chxt: 'x,y',
-            chd: 't:',
-            chxl: '0:|12時間前|9時間前|6時間前|3時間前|0時間前',
-            chdl: 'タスク',
-            chs: '750x250'
-        });
-        params.chd += telemetries.map((telemetry) => (telemetry.result.stock.tasks !== undefined) ? telemetry.result.stock.tasks.numberOfUnexecuted : 0).join(',');
-        const imageFullsize = yield publishUrl(params);
-        yield sskts.service.notification.report2developers('時点でのタスク数', '', imageFullsize, imageFullsize)();
     });
 }
 /**

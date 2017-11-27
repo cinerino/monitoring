@@ -1,5 +1,5 @@
 /**
- * 販売者向け測定データを作成する
+ * グローバル測定データを作成する
  * @ignore
  */
 
@@ -22,21 +22,22 @@ export async function main() {
     const authorizeActionRepo = new sskts.repository.action.Authorize(sskts.mongoose.connection);
     debug('creating telemetry...');
 
-    // 取引セッション時間に対して十分に時間を置いて計測する
-    // tslint:disable-next-line:no-magic-numbers
-    const dateNow = moment().add(-30, 'minutes');
+    const dateNow = moment();
     // tslint:disable-next-line:no-magic-numbers
     const measuredAt = moment.unix((dateNow.unix() - (dateNow.unix() % 60)));
 
     // 劇場組織ごとに販売者向け測定データを作成する
     const movieTheaters = await organizationRepo.searchMovieTheaters({});
     await Promise.all(movieTheaters.map(async (movieTheater) => {
-        await sskts.service.report.createTelemetry({
+        await sskts.service.report.telemetry.createStock({
             measuredAt: measuredAt.toDate(),
             sellerId: movieTheater.id
-        })
-            (taskRepo, telemetryRepo, transactionRepo, authorizeActionRepo);
+        })(taskRepo, telemetryRepo, transactionRepo, authorizeActionRepo);
     }));
+
+    await sskts.service.report.telemetry.createStock({
+        measuredAt: measuredAt.toDate()
+    })(taskRepo, telemetryRepo, transactionRepo, authorizeActionRepo);
 
     sskts.mongoose.disconnect();
 }

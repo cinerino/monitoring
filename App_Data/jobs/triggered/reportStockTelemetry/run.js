@@ -5,8 +5,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
  * @ignore
  */
 const createDebug = require("debug");
-const Controller = require("../../../../controller/reportTelemetry");
-const debug = createDebug('sskts-monitoring-jobs:reportTelemetry:run');
+const Controller = require("../../../../controller/reportStockTelemetry");
+const debug = createDebug('sskts-monitoring-jobs');
 Controller.main().then(() => {
     debug('success!');
 }).catch((err) => {
