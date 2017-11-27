@@ -69,6 +69,7 @@ function main() {
             const telemetriesBySellerId = sellerTelemetries.filter((telemetry) => telemetry.object.sellerId === movieTheater.id);
             yield reportNumberOfTransactionsByStatuses(movieTheater.name.ja, telemetriesBySellerId); // ステータスごとの取引数
             yield reportConfirmedRatio(movieTheater.name.ja, telemetriesBySellerId);
+            yield reportTimeLeftUntilEvent(movieTheater.name.ja, telemetriesBySellerId);
             yield reportTransactionRequiredTimes(movieTheater.name.ja, telemetriesBySellerId); // 平均所要時間
             yield reportTransactionAmounts(movieTheater.name.ja, telemetriesBySellerId); // 平均金額
             yield reportTransactionActions(movieTheater.name.ja, telemetriesBySellerId); // 平均アクション数
@@ -158,7 +159,7 @@ function reportNumberOfTransactionsByStatuses(sellerName, telemetries) {
         params.chd += `|${telemetries.map((telemetry) => telemetry.result.flow.transactions.numberOfExpired).join(',')}`;
         const imageFullsize = yield publishUrl(params);
         debug('imageFullsize:', imageFullsize);
-        yield sskts.service.notification.report2developers(`[${sellerName}] 開始取引数/minute 成立取引数/minute 離脱取引数/minute`, '', imageFullsize, imageFullsize)();
+        yield sskts.service.notification.report2developers(`${sellerName}\n分あたりの開始取引数\n分あたりの成立取引数\n分あたりの離脱取引数`, '', imageFullsize, imageFullsize)();
     });
 }
 /**
@@ -183,7 +184,31 @@ function reportConfirmedRatio(sellerName, telemetries) {
         }).join(',');
         const imageFullsize = yield publishUrl(params);
         debug('imageFullsize:', imageFullsize);
-        yield sskts.service.notification.report2developers(`[${sellerName}] 取引成立率`, '', imageFullsize, imageFullsize)();
+        yield sskts.service.notification.report2developers(`${sellerName}\n分ごとの取引成立率`, '', imageFullsize, imageFullsize)();
+    });
+}
+/**
+ * イベント開始日時と取引成立日時の差を報告する
+ */
+function reportTimeLeftUntilEvent(sellerName, telemetries) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const params = Object.assign({}, defaultParams, {
+            chco: 'E96C6C,79CCF5,79F67D',
+            chxt: 'x,y,y',
+            chd: 't:',
+            chxl: '0:|12時間前|9時間前|6時間前|3時間前|0時間前|2:|時間',
+            chdl: '最大|平均|最小',
+            chs: '750x250'
+        });
+        const HOUR_IN_MILLISECONDS = 3600000;
+        params.chd += telemetries.map((telemetry) => Math.floor(telemetry.result.flow.transactions.maxTimeLeftUntilEventInMilliseconds / HOUR_IN_MILLISECONDS)).join(',');
+        // tslint:disable-next-line:prefer-template
+        params.chd += '|' + telemetries.map((telemetry) => Math.floor(telemetry.result.flow.transactions.averageTimeLeftUntilEventInMilliseconds / HOUR_IN_MILLISECONDS)).join(',');
+        // tslint:disable-next-line:prefer-template
+        params.chd += '|' + telemetries.map((telemetry) => Math.floor(telemetry.result.flow.transactions.minTimeLeftUntilEventInMilliseconds / HOUR_IN_MILLISECONDS)).join(',');
+        const imageFullsize = yield publishUrl(params);
+        debug('imageFullsize:', imageFullsize);
+        yield sskts.service.notification.report2developers(`${sellerName}\n何時間前に予約したか`, '', imageFullsize, imageFullsize)();
     });
 }
 /**
@@ -203,7 +228,7 @@ function reportTransactionRequiredTimes(sellerName, telemetries) {
         ).join(',');
         const imageFullsize = yield publishUrl(params);
         debug('imageFullsize:', imageFullsize);
-        yield sskts.service.notification.report2developers(`[${sellerName}] 取引所要時間平均値(秒)`, '', imageFullsize, imageFullsize)();
+        yield sskts.service.notification.report2developers(`${sellerName}\n分ごとの平均取引所要時間`, '', imageFullsize, imageFullsize)();
     });
 }
 /**
@@ -222,7 +247,7 @@ function reportTransactionAmounts(sellerName, telemetries) {
         params.chd += telemetries.map((telemetry) => telemetry.result.flow.transactions.averageAmount).join(',');
         const imageFullsize = yield publishUrl(params);
         debug('imageFullsize:', imageFullsize);
-        yield sskts.service.notification.report2developers(`[${sellerName}] 取引金額平均値/minute`, '', imageFullsize, imageFullsize)();
+        yield sskts.service.notification.report2developers(`${sellerName}\n分ごとの平均取引金額`, '', imageFullsize, imageFullsize)();
     });
 }
 /**
@@ -242,7 +267,7 @@ function reportTransactionActions(sellerName, telemetries) {
         params.chd += `|${telemetries.map((telemetry) => telemetry.result.flow.transactions.averageNumberOfActionsOnExpired).join(',')}`;
         const imageFullsize = yield publishUrl(params);
         debug('imageFullsize:', imageFullsize);
-        yield sskts.service.notification.report2developers(`[${sellerName}] 取引アクション数平均値/minute`, '', imageFullsize, imageFullsize)();
+        yield sskts.service.notification.report2developers(`${sellerName}\n分ごとの平均取引承認アクション数`, '', imageFullsize, imageFullsize)();
     });
 }
 /**
@@ -260,7 +285,7 @@ function reportNumberOfTransactionsUnderway(sellerName, telemetries) {
         });
         params.chd += telemetries.map((telemetry) => telemetry.result.stock.transactions.numberOfUnderway).join(',');
         const imageFullsize = yield publishUrl(params);
-        yield sskts.service.notification.report2developers(`[${sellerName}] 時点での進行中取引数`, '', imageFullsize, imageFullsize)();
+        yield sskts.service.notification.report2developers(`${sellerName}\n時点での進行中取引数`, '', imageFullsize, imageFullsize)();
     });
 }
 /**

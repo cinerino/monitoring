@@ -74,6 +74,7 @@ export async function main() {
         const telemetriesBySellerId = sellerTelemetries.filter((telemetry) => telemetry.object.sellerId === movieTheater.id);
         await reportNumberOfTransactionsByStatuses(movieTheater.name.ja, telemetriesBySellerId); // ステータスごとの取引数
         await reportConfirmedRatio(movieTheater.name.ja, telemetriesBySellerId);
+        await reportTimeLeftUntilEvent(movieTheater.name.ja, telemetriesBySellerId);
         await reportTransactionRequiredTimes(movieTheater.name.ja, telemetriesBySellerId); // 平均所要時間
         await reportTransactionAmounts(movieTheater.name.ja, telemetriesBySellerId); // 平均金額
         await reportTransactionActions(movieTheater.name.ja, telemetriesBySellerId); // 平均アクション数
@@ -192,7 +193,7 @@ async function reportNumberOfTransactionsByStatuses(sellerName: string, telemetr
     debug('imageFullsize:', imageFullsize);
 
     await sskts.service.notification.report2developers(
-        `[${sellerName}] 開始取引数/minute 成立取引数/minute 離脱取引数/minute`,
+        `${sellerName}\n分あたりの開始取引数\n分あたりの成立取引数\n分あたりの離脱取引数`,
         '',
         imageFullsize,
         imageFullsize
@@ -227,7 +228,45 @@ async function reportConfirmedRatio(sellerName: string, telemetries: ITelemetryS
     debug('imageFullsize:', imageFullsize);
 
     await sskts.service.notification.report2developers(
-        `[${sellerName}] 取引成立率`,
+        `${sellerName}\n分ごとの取引成立率`,
+        '',
+        imageFullsize,
+        imageFullsize
+    )();
+}
+
+/**
+ * イベント開始日時と取引成立日時の差を報告する
+ */
+async function reportTimeLeftUntilEvent(sellerName: string, telemetries: ITelemetrySeller[]) {
+    const params = {
+        ...defaultParams, ...{
+            chco: 'E96C6C,79CCF5,79F67D',
+            chxt: 'x,y,y',
+            chd: 't:',
+            chxl: '0:|12時間前|9時間前|6時間前|3時間前|0時間前|2:|時間',
+            chdl: '最大|平均|最小',
+            chs: '750x250'
+        }
+    };
+
+    const HOUR_IN_MILLISECONDS = 3600000;
+    params.chd += telemetries.map(
+        (telemetry) => Math.floor(telemetry.result.flow.transactions.maxTimeLeftUntilEventInMilliseconds / HOUR_IN_MILLISECONDS)
+    ).join(',');
+    // tslint:disable-next-line:prefer-template
+    params.chd += '|' + telemetries.map(
+        (telemetry) => Math.floor(telemetry.result.flow.transactions.averageTimeLeftUntilEventInMilliseconds / HOUR_IN_MILLISECONDS)
+    ).join(',');
+    // tslint:disable-next-line:prefer-template
+    params.chd += '|' + telemetries.map(
+        (telemetry) => Math.floor(telemetry.result.flow.transactions.minTimeLeftUntilEventInMilliseconds / HOUR_IN_MILLISECONDS)
+    ).join(',');
+    const imageFullsize = await publishUrl(params);
+    debug('imageFullsize:', imageFullsize);
+
+    await sskts.service.notification.report2developers(
+        `${sellerName}\n何時間前に予約したか`,
         '',
         imageFullsize,
         imageFullsize
@@ -255,7 +294,7 @@ async function reportTransactionRequiredTimes(sellerName: string, telemetries: I
     debug('imageFullsize:', imageFullsize);
 
     await sskts.service.notification.report2developers(
-        `[${sellerName}] 取引所要時間平均値(秒)`,
+        `${sellerName}\n分ごとの平均取引所要時間`,
         '',
         imageFullsize,
         imageFullsize
@@ -283,7 +322,7 @@ async function reportTransactionAmounts(sellerName: string, telemetries: ITeleme
     debug('imageFullsize:', imageFullsize);
 
     await sskts.service.notification.report2developers(
-        `[${sellerName}] 取引金額平均値/minute`,
+        `${sellerName}\n分ごとの平均取引金額`,
         '',
         imageFullsize,
         imageFullsize
@@ -310,7 +349,7 @@ async function reportTransactionActions(sellerName: string, telemetries: ITeleme
     debug('imageFullsize:', imageFullsize);
 
     await sskts.service.notification.report2developers(
-        `[${sellerName}] 取引アクション数平均値/minute`,
+        `${sellerName}\n分ごとの平均取引承認アクション数`,
         '',
         imageFullsize,
         imageFullsize
@@ -335,7 +374,7 @@ async function reportNumberOfTransactionsUnderway(sellerName: string, telemetrie
     const imageFullsize = await publishUrl(params);
 
     await sskts.service.notification.report2developers(
-        `[${sellerName}] 時点での進行中取引数`,
+        `${sellerName}\n時点での進行中取引数`,
         '',
         imageFullsize,
         imageFullsize
