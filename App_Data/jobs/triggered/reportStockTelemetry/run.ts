@@ -1,9 +1,9 @@
 /**
- * GMO実売上状況を報告する
+ * 測定データ報告
  * @ignore
  */
 import * as createDebug from 'debug';
-import * as Controller from '../../../../controller/reportGMOSales';
+import * as Controller from '../../../../controller/reportStockTelemetry';
 
 const debug = createDebug('sskts-monitoring-jobs');
 

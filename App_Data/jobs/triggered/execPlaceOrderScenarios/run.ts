@@ -1,5 +1,5 @@
 /**
- * 注文シナリオリクエストをAPIに投げる
+ * 注文シナリオリクエストを実行する
  * @ignore
  */
 
@@ -10,9 +10,9 @@ import * as moment from 'moment';
 import * as request from 'request-promise-native';
 import { setInterval } from 'timers';
 
-import * as processPlaceOrder from './processPlaceOrder';
+import * as processPlaceOrder from '../../../../controller/scenarios/processPlaceOrder';
 
-const debug = createDebug('sskts-monitoring-jobs:requestPlaceOrderScenarios');
+const debug = createDebug('sskts-monitoring-jobs');
 
 interface IConfigurations {
     /**
@@ -66,7 +66,9 @@ function startScenarios(configurations: IConfigurations) {
             const theaterCode = theaterCodes[Math.floor(theaterCodes.length * Math.random())];
 
             try {
-                const { transaction, order, numberOfTryAuthorizeCreditCard } = await processPlaceOrder.main(theaterCode);
+                // tslint:disable-next-line:insecure-random no-magic-numbers
+                const duration = Math.floor(500000 * Math.random() + 300000);
+                const { transaction, order, numberOfTryAuthorizeCreditCard } = await processPlaceOrder.main(theaterCode, duration);
                 result = {
                     processNumber: processNumber,
                     transactionId: transaction.id,
@@ -185,8 +187,8 @@ api endpoint  | ${configurations.apiEndpoint}
             json: true
         }
     ).then((body: any[]) => body);
-    debug('users:', users);
 
+    debug('notifying', users.length, 'people on backlog...');
     await request.post(
         {
             url: `https://m-p.backlog.jp/api/v2/issues/SSKTS-621/comments?apiKey=${process.env.BACKLOG_API_KEY}`,

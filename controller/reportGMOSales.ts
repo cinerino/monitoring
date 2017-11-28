@@ -10,7 +10,7 @@ import * as request from 'request-promise-native';
 
 import mongooseConnectionOptions from '../mongooseConnectionOptions';
 
-const debug = createDebug('sskts-monitoring-jobs:controller:reportGMOSales');
+const debug = createDebug('sskts-monitoring-jobs');
 const defaultParams = {
     chco: 'DAA8F5',
     chf: 'bg,s,283037',

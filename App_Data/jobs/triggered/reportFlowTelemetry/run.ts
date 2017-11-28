@@ -3,9 +3,9 @@
  * @ignore
  */
 import * as createDebug from 'debug';
-import * as Controller from '../../../../controller/reportTelemetry';
+import * as Controller from '../../../../controller/reportFlowTelemetry';
 
-const debug = createDebug('sskts-monitoring-jobs:reportTelemetry:run');
+const debug = createDebug('sskts-monitoring-jobs');
 
 Controller.main().then(() => {
     debug('success!');

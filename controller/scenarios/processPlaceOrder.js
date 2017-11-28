@@ -10,15 +10,15 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 /**
- * a sample processing placeOrder transaction
- * @ignore
+ * 注文取引シナリオ
+ * @module
  */
 const sasaki = require("@motionpicture/sskts-api-nodejs-client");
 const sskts = require("@motionpicture/sskts-domain");
 const createDebug = require("debug");
 const moment = require("moment");
 const util = require("util");
-const debug = createDebug('sskts-monitoring-jobs:requestPlaceOrderScenarios');
+const debug = createDebug('sskts-monitoring-jobs');
 const auth = new sasaki.auth.ClientCredentials({
     domain: process.env.SSKTS_API_AUTHORIZE_SERVER_DOMAIN,
     clientId: process.env.SSKTS_API_CLIENT_ID,
@@ -43,7 +43,7 @@ const placeOrderTransactions = sasaki.service.transaction.placeOrder({
     auth: auth
 });
 // tslint:disable-next-line:max-func-body-length
-function main(theaterCode) {
+function main(theaterCode, durationInMillisecond) {
     return __awaiter(this, void 0, void 0, function* () {
         // search movie theater organizations
         const movieTheaterOrganization = yield organizations.findMovieTheaterByBranchCode({
@@ -57,14 +57,15 @@ function main(theaterCode) {
             superEventLocationIdentifiers: [movieTheaterOrganization.identifier],
             startFrom: moment().toDate(),
             // tslint:disable-next-line:no-magic-numbers
-            startThrough: moment().add(2, 'day').toDate()
+            startThrough: moment().add(2, 'days').toDate()
         });
         const availableEvents = individualScreeningEvents.filter((event) => (event.offer.availability !== null && event.offer.availability > 0));
         if (availableEvents.length === 0) {
             throw new Error('no available events');
         }
+        // 上映イベント選択時間
         // tslint:disable-next-line:no-magic-numbers
-        yield wait(5000);
+        yield wait(Math.floor(durationInMillisecond / 6));
         const availableEvent = availableEvents[Math.floor(availableEvents.length * Math.random())];
         // retrieve an event detail
         const individualScreeningEvent = yield events.findIndividualScreeningEvent({
@@ -82,9 +83,10 @@ function main(theaterCode) {
         debug('starting a transaction...');
         const transaction = yield placeOrderTransactions.start({
             // tslint:disable-next-line:no-magic-numbers
-            expires: moment().add(10, 'minutes').toDate(),
+            expires: moment().add(durationInMillisecond + 120000, 'milliseconds').toDate(),
             sellerId: movieTheaterOrganization.id
         });
+        debug('transaction started.', transaction);
         // search sales tickets from sskts.COA
         // このサンプルは1座席購入なので、制限単位が1枚以上の券種に絞る
         const salesTicketResult = yield sskts.COA.services.reserve.salesTicket({
@@ -113,8 +115,9 @@ function main(theaterCode) {
         if (getStateReserveSeatResult.cntReserveFree <= 0) {
             throw new Error('no available seats');
         }
+        // 座席選択時間
         // tslint:disable-next-line:no-magic-numbers
-        yield wait(5000);
+        yield wait(Math.floor(durationInMillisecond / 6));
         // select a seat randomly
         const selectedSeatCode = freeSeatCodes[Math.floor(freeSeatCodes.length * Math.random())];
         // select a ticket randomly
@@ -151,8 +154,9 @@ function main(theaterCode) {
             ]
         });
         debug('seatReservationAuthorization:', seatReservationAuthorization);
+        // 座席再選択時間
         // tslint:disable-next-line:no-magic-numbers
-        yield wait(5000);
+        yield wait(Math.floor(durationInMillisecond / 6));
         debug('canceling a seat reservation authorization...');
         yield placeOrderTransactions.cancelSeatReservationAuthorization({
             transactionId: transaction.id,
@@ -190,8 +194,9 @@ function main(theaterCode) {
             ]
         });
         debug('seatReservationAuthorization:', seatReservationAuthorization);
+        // 券種選択時間
         // tslint:disable-next-line:no-magic-numbers
-        yield wait(5000);
+        yield wait(Math.floor(durationInMillisecond / 6));
         debug('券種を変更します...');
         // select a ticket randomly
         selectedSalesTicket = salesTicketResult[Math.floor(salesTicketResult.length * Math.random())];
@@ -251,8 +256,9 @@ function main(theaterCode) {
         //     numberOfTryAuthorizeCreditCard = result.numberOfTryAuthorizeCreditCard
         // });
         // debug('creditCardAuthorization:', creditCardAuthorization, numberOfTryAuthorizeCreditCard);
+        // 購入者情報入力時間
         // tslint:disable-next-line:no-magic-numbers
-        yield wait(5000);
+        yield wait(Math.floor(durationInMillisecond / 6));
         debug('registering a customer contact...');
         const contact = {
             givenName: 'たろう',
@@ -266,8 +272,9 @@ function main(theaterCode) {
         }).then((result) => {
             debug('customer contact registered.', result);
         });
+        // 購入情報確認時間
         // tslint:disable-next-line:no-magic-numbers
-        yield wait(5000);
+        yield wait(Math.floor(durationInMillisecond / 6));
         debug('confirming a transaction...');
         const order = yield placeOrderTransactions.confirm({
             transactionId: transaction.id

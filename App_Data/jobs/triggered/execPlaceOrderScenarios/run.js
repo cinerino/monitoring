@@ -1,6 +1,6 @@
 "use strict";
 /**
- * 注文シナリオリクエストをAPIに投げる
+ * 注文シナリオリクエストを実行する
  * @ignore
  */
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -18,8 +18,8 @@ const json2csv = require("json2csv");
 const moment = require("moment");
 const request = require("request-promise-native");
 const timers_1 = require("timers");
-const processPlaceOrder = require("./processPlaceOrder");
-const debug = createDebug('sskts-monitoring-jobs:requestPlaceOrderScenarios');
+const processPlaceOrder = require("../../../../controller/scenarios/processPlaceOrder");
+const debug = createDebug('sskts-monitoring-jobs');
 startScenarios({
     // tslint:disable-next-line:no-magic-numbers
     numberOfTrials: (process.argv[2] !== undefined) ? parseInt(process.argv[2], 10) : 10,
@@ -49,7 +49,9 @@ function startScenarios(configurations) {
         // tslint:disable-next-line:insecure-random
         const theaterCode = theaterCodes[Math.floor(theaterCodes.length * Math.random())];
         try {
-            const { transaction, order, numberOfTryAuthorizeCreditCard } = yield processPlaceOrder.main(theaterCode);
+            // tslint:disable-next-line:insecure-random no-magic-numbers
+            const duration = Math.floor(500000 * Math.random() + 300000);
+            const { transaction, order, numberOfTryAuthorizeCreditCard } = yield processPlaceOrder.main(theaterCode, duration);
             result = {
                 processNumber: processNumber,
                 transactionId: transaction.id,
@@ -158,7 +160,7 @@ api endpoint  | ${configurations.apiEndpoint}
             url: `https://m-p.backlog.jp/api/v2/projects/SSKTS/users?apiKey=${process.env.BACKLOG_API_KEY}`,
             json: true
         }).then((body) => body);
-        debug('users:', users);
+        debug('notifying', users.length, 'people on backlog...');
         yield request.post({
             url: `https://m-p.backlog.jp/api/v2/issues/SSKTS-621/comments?apiKey=${process.env.BACKLOG_API_KEY}`,
             form: {

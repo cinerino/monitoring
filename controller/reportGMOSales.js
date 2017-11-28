@@ -17,7 +17,7 @@ const createDebug = require("debug");
 const moment = require("moment");
 const request = require("request-promise-native");
 const mongooseConnectionOptions_1 = require("../mongooseConnectionOptions");
-const debug = createDebug('sskts-monitoring-jobs:controller:reportGMOSales');
+const debug = createDebug('sskts-monitoring-jobs');
 const defaultParams = {
     chco: 'DAA8F5',
     chf: 'bg,s,283037',
