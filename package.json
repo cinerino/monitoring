@@ -9,8 +9,8 @@
     }
   ],
   "dependencies": {
-    "@motionpicture/sskts-api-nodejs-client": "^2.1.0-alpha.2",
-    "@motionpicture/sskts-domain": "^23.4.0-alpha.5",
+    "@motionpicture/sskts-api-nodejs-client": "^2.1.0",
+    "@motionpicture/sskts-domain": "^23.4.0",
     "debug": "^3.1.0",
     "json2csv": "^3.11.5",
     "moment": "^2.19.2",
@@ -27,10 +27,10 @@
     "mocha": "^4.0.1",
     "nsp": "^2.8.1",
     "rimraf": "^2.6.2",
-    "snyk": "^1.49.3",
+    "snyk": "^1.52.0",
     "tslint": "^5.8.0",
     "tslint-microsoft-contrib": "^5.0.1",
-    "typescript": "^2.6.1"
+    "typescript": "^2.6.2"
   },
   "engines": {
     "node": ">=8.0.0",

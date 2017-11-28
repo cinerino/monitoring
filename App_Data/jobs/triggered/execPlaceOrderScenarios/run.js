@@ -160,7 +160,7 @@ api endpoint  | ${configurations.apiEndpoint}
             url: `https://m-p.backlog.jp/api/v2/projects/SSKTS/users?apiKey=${process.env.BACKLOG_API_KEY}`,
             json: true
         }).then((body) => body);
-        debug('users:', users);
+        debug('notifying', users.length, 'people on backlog...');
         yield request.post({
             url: `https://m-p.backlog.jp/api/v2/issues/SSKTS-621/comments?apiKey=${process.env.BACKLOG_API_KEY}`,
             form: {

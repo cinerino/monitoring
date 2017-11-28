@@ -187,8 +187,8 @@ api endpoint  | ${configurations.apiEndpoint}
             json: true
         }
     ).then((body: any[]) => body);
-    debug('users:', users);
 
+    debug('notifying', users.length, 'people on backlog...');
     await request.post(
         {
             url: `https://m-p.backlog.jp/api/v2/issues/SSKTS-621/comments?apiKey=${process.env.BACKLOG_API_KEY}`,

@@ -92,6 +92,7 @@ export async function main(theaterCode: string, durationInMillisecond: number) {
         expires: moment().add(durationInMillisecond + 120000, 'milliseconds').toDate(),
         sellerId: movieTheaterOrganization.id
     });
+    debug('transaction started.', transaction);
 
     // search sales tickets from sskts.COA
     // このサンプルは1座席購入なので、制限単位が1枚以上の券種に絞る
