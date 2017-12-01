@@ -1,6 +1,6 @@
 "use strict";
 /**
- * 測定データを報告する
+ * ストック測定データを報告する
  * @ignore
  */
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -15,8 +15,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const sskts = require("@motionpicture/sskts-domain");
 const createDebug = require("debug");
 const moment = require("moment");
-const request = require("request-promise-native");
 const mongooseConnectionOptions_1 = require("../mongooseConnectionOptions");
+const GoogleChart = require("./googleChart");
 const debug = createDebug('sskts-monitoring-jobs');
 const defaultParams = {
     chco: 'DAA8F5',
@@ -81,7 +81,7 @@ function reportNumberOfTransactionsUnderway(sellerName, telemetries) {
             chs: '750x250'
         });
         params.chd += telemetries.map((telemetry) => telemetry.result.transactions.numberOfUnderway).join(',');
-        const imageFullsize = yield publishUrl(params);
+        const imageFullsize = yield GoogleChart.publishUrl(params);
         yield sskts.service.notification.report2developers(`${sellerName}\n時点での進行中取引数`, '', imageFullsize, imageFullsize)();
     });
 }
@@ -99,39 +99,7 @@ function reportNumberOfTasksUnexecuted(telemetries) {
             chs: '750x250'
         });
         params.chd += telemetries.map((telemetry) => (telemetry.result.tasks !== undefined) ? telemetry.result.tasks.numberOfUnexecuted : 0).join(',');
-        const imageFullsize = yield publishUrl(params);
+        const imageFullsize = yield GoogleChart.publishUrl(params);
         yield sskts.service.notification.report2developers('時点でのタスク数', '', imageFullsize, imageFullsize)();
-    });
-}
-/**
- * URL短縮
- *
- * @param {string} originalUrl 元のURL
- * @returns {Promise<string>}
- */
-// async function shortenUrl(originalUrl: string): Promise<string> {
-//     return await request.get({
-//         url: 'https://is.gd/create.php',
-//         qs: {
-//             format: 'json',
-//             url: originalUrl
-//         },
-//         json: true
-//     }).then((body) => <string>body.shorturl);
-// }
-function publishUrl(params) {
-    return __awaiter(this, void 0, void 0, function* () {
-        // google chart apiで画像生成
-        const buffer = yield request.post({
-            url: 'https://chart.googleapis.com/chart',
-            form: params,
-            encoding: 'binary'
-        }).then((body) => new Buffer(body, 'binary'));
-        debug('creating block blob... buffer.length:', buffer.length);
-        return sskts.service.util.uploadFile({
-            fileName: `sskts-monitoring-jobs-reportTelemetry-images-${moment().format('YYYYMMDDHHmmssSSS')}.png`,
-            text: buffer,
-            expiryDate: moment().add(1, 'hour').toDate()
-        })();
     });
 }

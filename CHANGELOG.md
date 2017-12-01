@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ### Changed
 - 測定データをグローバルスコープと販売者スコープに判別。
+- チャートの表示有効期間を環境変数で設定できるように対応。
 
 ### Deprecated
 
