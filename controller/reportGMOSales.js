@@ -15,9 +15,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const sskts = require("@motionpicture/sskts-domain");
 const createDebug = require("debug");
 const moment = require("moment");
-const request = require("request-promise-native");
 const mongooseConnectionOptions_1 = require("../mongooseConnectionOptions");
-const debug = createDebug('sskts-monitoring-jobs:controller:reportGMOSales');
+const GoogleChart = require("./googleChart");
+const debug = createDebug('sskts-monitoring-jobs');
 const defaultParams = {
     chco: 'DAA8F5',
     chf: 'bg,s,283037',
@@ -91,7 +91,7 @@ function reportScatterChartInAmountAndTranDate() {
         params.chd += `|${Object.keys(prots).map((key) => Math.floor(prots[key].size / sizeMax * 50)).join(',')}`;
         // params.chd += gmoNotifications.map((gmoNotification) => Number(gmoNotification.tran_date.slice(8, 10))).join(',');
         // params.chd += '|' + gmoNotifications.map((gmoNotification) => Math.floor(gmoNotification.amount / 100)).join(',');
-        const imageFullsize = yield publishUrl(params);
+        const imageFullsize = yield GoogleChart.publishUrl(params);
         yield sskts.service.notification.report2developers(`GMO売上散布図
 ${madeFrom.format('MM/DD HH:mm:ss')}-${madeThrough.format('MM/DD HH:mm:ss')}`, `サンプル数:${gmoNotifications.length}`, imageFullsize, imageFullsize)();
     });
@@ -138,25 +138,9 @@ function reportGMOSalesAggregations() {
             chs: '750x250'
         });
         params.chd += aggregations.map((agrgegation) => Math.floor(agrgegation.totalAmount / AMOUNT_UNIT)).join(',');
-        const imageFullsize = yield publishUrl(params);
+        const imageFullsize = yield GoogleChart.publishUrl(params);
         const lastAggregation = aggregations[aggregations.length - 1];
         yield sskts.service.notification.report2developers(`GMO売上金額遷移(15分単位)
 ${moment(aggregations[0].madeFrom).format('MM/DD HH:mm:ss')}-${moment(lastAggregation.madeThrough).format('MM/DD HH:mm:ss')}`, '', imageFullsize, imageFullsize)();
-    });
-}
-function publishUrl(params) {
-    return __awaiter(this, void 0, void 0, function* () {
-        // google chart apiで画像生成
-        const buffer = yield request.post({
-            url: 'https://chart.googleapis.com/chart',
-            form: params,
-            encoding: 'binary'
-        }).then((body) => new Buffer(body, 'binary'));
-        debug('creating block blob... buffer.length:', buffer.length);
-        return sskts.service.util.uploadFile({
-            fileName: `sskts-monitoring-jobs-reportGMOSales-images-${moment().format('YYYYMMDDHHmmssSSS')}.png`,
-            text: buffer,
-            expiryDate: moment().add(1, 'hour').toDate()
-        })();
     });
 }

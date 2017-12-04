@@ -9,7 +9,7 @@ import * as moment from 'moment';
 
 import mongooseConnectionOptions from '../../../../mongooseConnectionOptions';
 
-const debug = createDebug('sskts-monitoring-jobs:checkHealthOfGMOSales');
+const debug = createDebug('sskts-monitoring-jobs');
 
 /**
  * 集計の時間単位(秒)
@@ -28,7 +28,7 @@ export async function main() {
     // tslint:disable-next-line:no-magic-numbers
     const madeFrom = moment(madeThrough).add(-AGGREGATION_UNIT_TIME_IN_SECONDS, 'seconds').toDate();
 
-    const report = await sskts.service.report.checkHealthOfGMOSales(madeFrom, madeThrough)(gmoNotificationRepo, transactionRepo);
+    const report = await sskts.service.report.health.checkGMOSales(madeFrom, madeThrough)(gmoNotificationRepo, transactionRepo);
     debug('reportOfGMOSalesHealthCheck:', report);
 
     const subject = 'GMO売上健康診断';

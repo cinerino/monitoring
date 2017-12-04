@@ -6,11 +6,11 @@
 import * as sskts from '@motionpicture/sskts-domain';
 import * as createDebug from 'debug';
 import * as moment from 'moment';
-import * as request from 'request-promise-native';
 
 import mongooseConnectionOptions from '../mongooseConnectionOptions';
+import * as GoogleChart from './googleChart';
 
-const debug = createDebug('sskts-monitoring-jobs:controller:reportGMOSales');
+const debug = createDebug('sskts-monitoring-jobs');
 const defaultParams = {
     chco: 'DAA8F5',
     chf: 'bg,s,283037',
@@ -95,7 +95,7 @@ async function reportScatterChartInAmountAndTranDate() {
     params.chd += `|${Object.keys(prots).map((key) => Math.floor(prots[key].size / sizeMax * 50)).join(',')}`;
     // params.chd += gmoNotifications.map((gmoNotification) => Number(gmoNotification.tran_date.slice(8, 10))).join(',');
     // params.chd += '|' + gmoNotifications.map((gmoNotification) => Math.floor(gmoNotification.amount / 100)).join(',');
-    const imageFullsize = await publishUrl(params);
+    const imageFullsize = await GoogleChart.publishUrl(params);
 
     await sskts.service.notification.report2developers(
         `GMO売上散布図
@@ -154,7 +154,7 @@ async function reportGMOSalesAggregations() {
         }
     };
     params.chd += aggregations.map((agrgegation) => Math.floor(agrgegation.totalAmount / AMOUNT_UNIT)).join(',');
-    const imageFullsize = await publishUrl(params);
+    const imageFullsize = await GoogleChart.publishUrl(params);
 
     const lastAggregation = aggregations[aggregations.length - 1];
 
@@ -165,20 +165,4 @@ ${moment(aggregations[0].madeFrom).format('MM/DD HH:mm:ss')}-${moment(lastAggreg
         imageFullsize,
         imageFullsize
     )();
-}
-
-async function publishUrl(params: any) {
-    // google chart apiで画像生成
-    const buffer = await request.post({
-        url: 'https://chart.googleapis.com/chart',
-        form: params,
-        encoding: 'binary'
-    }).then((body) => new Buffer(body, 'binary'));
-    debug('creating block blob... buffer.length:', buffer.length);
-
-    return sskts.service.util.uploadFile({
-        fileName: `sskts-monitoring-jobs-reportGMOSales-images-${moment().format('YYYYMMDDHHmmssSSS')}.png`,
-        text: buffer,
-        expiryDate: moment().add(1, 'hour').toDate()
-    })();
 }

@@ -1,6 +1,6 @@
 "use strict";
 /**
- * GMO実売上の健康診断を実施する
+ * 販売者向け測定データを作成する
  * @ignore
  */
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -17,32 +17,32 @@ const createDebug = require("debug");
 const moment = require("moment");
 const mongooseConnectionOptions_1 = require("../../../../mongooseConnectionOptions");
 const debug = createDebug('sskts-monitoring-jobs');
-/**
- * 集計の時間単位(秒)
- */
-const AGGREGATION_UNIT_TIME_IN_SECONDS = 86400;
 function main() {
     return __awaiter(this, void 0, void 0, function* () {
+        debug('connecting mongodb...');
         sskts.mongoose.connect(process.env.MONGOLAB_URI, mongooseConnectionOptions_1.default);
-        const gmoNotificationRepo = new sskts.repository.GMONotification(sskts.mongoose.connection);
+        const organizationRepo = new sskts.repository.Organization(sskts.mongoose.connection);
+        const taskRepo = new sskts.repository.Task(sskts.mongoose.connection);
+        const telemetryRepo = new sskts.repository.Telemetry(sskts.mongoose.connection);
         const transactionRepo = new sskts.repository.Transaction(sskts.mongoose.connection);
-        const dateNow = moment();
+        const authorizeActionRepo = new sskts.repository.action.Authorize(sskts.mongoose.connection);
+        debug('creating telemetry...');
+        // 取引セッション時間に対して十分に時間を置いて計測する
         // tslint:disable-next-line:no-magic-numbers
-        const madeThrough = moment((dateNow.unix() - dateNow.unix() % 3600) * 1000).toDate();
+        const dateNow = moment().add(-30, 'minutes');
         // tslint:disable-next-line:no-magic-numbers
-        const madeFrom = moment(madeThrough).add(-AGGREGATION_UNIT_TIME_IN_SECONDS, 'seconds').toDate();
-        const report = yield sskts.service.report.health.checkGMOSales(madeFrom, madeThrough)(gmoNotificationRepo, transactionRepo);
-        debug('reportOfGMOSalesHealthCheck:', report);
-        const subject = 'GMO売上健康診断';
-        let content = `${moment(report.madeFrom).format('M/D H:mm')}-${moment(report.madeThrough).format('M/D H:mm')}
-${report.totalAmount} ${report.totalAmountCurrency}
-healthy: ${report.numberOfSales - report.unhealthGMOSales.length}/${report.numberOfSales}
-unhealthy: ${report.unhealthGMOSales.length}/${report.numberOfSales}`;
-        if (report.unhealthGMOSales.length > 0) {
-            content += `
-${report.unhealthGMOSales.map((unhealthGMOSale) => `▲${unhealthGMOSale.orderId}\n${unhealthGMOSale.reason}`).join('\n')}`;
-        }
-        yield sskts.service.notification.report2developers(subject, content)();
+        const measuredAt = moment.unix((dateNow.unix() - (dateNow.unix() % 60)));
+        // 劇場組織ごとに販売者向け測定データを作成する
+        const movieTheaters = yield organizationRepo.searchMovieTheaters({});
+        yield Promise.all(movieTheaters.map((movieTheater) => __awaiter(this, void 0, void 0, function* () {
+            yield sskts.service.report.telemetry.createFlow({
+                measuredAt: measuredAt.toDate(),
+                sellerId: movieTheater.id
+            })(taskRepo, telemetryRepo, transactionRepo, authorizeActionRepo);
+        })));
+        yield sskts.service.report.telemetry.createFlow({
+            measuredAt: measuredAt.toDate()
+        })(taskRepo, telemetryRepo, transactionRepo, authorizeActionRepo);
         sskts.mongoose.disconnect();
     });
 }

@@ -1,5 +1,5 @@
 /**
- * 測定データを作成する
+ * グローバル測定データを作成する
  * @ignore
  */
 
@@ -9,12 +9,13 @@ import * as moment from 'moment';
 
 import mongooseConnectionOptions from '../../../../mongooseConnectionOptions';
 
-const debug = createDebug('sskts-monitoring-jobs:createTelemetry');
+const debug = createDebug('sskts-monitoring-jobs');
 
 export async function main() {
     debug('connecting mongodb...');
     sskts.mongoose.connect(<string>process.env.MONGOLAB_URI, mongooseConnectionOptions);
 
+    const organizationRepo = new sskts.repository.Organization(sskts.mongoose.connection);
     const taskRepo = new sskts.repository.Task(sskts.mongoose.connection);
     const telemetryRepo = new sskts.repository.Telemetry(sskts.mongoose.connection);
     const transactionRepo = new sskts.repository.Transaction(sskts.mongoose.connection);
@@ -25,8 +26,18 @@ export async function main() {
     // tslint:disable-next-line:no-magic-numbers
     const measuredAt = moment.unix((dateNow.unix() - (dateNow.unix() % 60)));
 
-    await sskts.service.report.createTelemetry(measuredAt.toDate())
-        (taskRepo, telemetryRepo, transactionRepo, authorizeActionRepo);
+    // 劇場組織ごとに販売者向け測定データを作成する
+    const movieTheaters = await organizationRepo.searchMovieTheaters({});
+    await Promise.all(movieTheaters.map(async (movieTheater) => {
+        await sskts.service.report.telemetry.createStock({
+            measuredAt: measuredAt.toDate(),
+            sellerId: movieTheater.id
+        })(taskRepo, telemetryRepo, transactionRepo, authorizeActionRepo);
+    }));
+
+    await sskts.service.report.telemetry.createStock({
+        measuredAt: measuredAt.toDate()
+    })(taskRepo, telemetryRepo, transactionRepo, authorizeActionRepo);
 
     sskts.mongoose.disconnect();
 }
