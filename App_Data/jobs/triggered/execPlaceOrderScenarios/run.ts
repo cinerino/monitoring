@@ -34,7 +34,7 @@ interface IConfigurations {
 }
 
 interface IResult {
-    processNumber: string;
+    processNumber: number;
     transactionId: string;
     startDate: string;
     errorMessage: string;
@@ -91,11 +91,10 @@ function startScenarios(configurations: IConfigurations) {
 
             try {
                 // tslint:disable-next-line:insecure-random no-magic-numbers
-                // const duration = Math.floor(500000 * Math.random() + 300000);
-                const duration = 30;
+                const duration = Math.floor(500000 * Math.random() + 300000);
                 const { transaction, order, numberOfTryAuthorizeCreditCard } = await processPlaceOrder.main(sellerBranchCode, duration);
                 result = {
-                    processNumber: processNumber.toString(),
+                    processNumber: processNumber,
                     transactionId: transaction.id,
                     startDate: now.toISOString(),
                     errorMessage: '',
@@ -111,7 +110,7 @@ function startScenarios(configurations: IConfigurations) {
                 };
             } catch (error) {
                 result = {
-                    processNumber: processNumber.toString(),
+                    processNumber: processNumber,
                     transactionId: '',
                     startDate: now.toISOString(),
                     errorMessage: error.message,
@@ -129,7 +128,7 @@ function startScenarios(configurations: IConfigurations) {
 
             log = `
 =============================== Transaction result ===============================
-processNumber                    : ${result.processNumber}
+processNumber                    : ${result.processNumber.toString()}
 transactionId                    : ${result.transactionId}
 startDate                        : ${result.startDate}
 errorMessage                     : ${result.errorMessage}

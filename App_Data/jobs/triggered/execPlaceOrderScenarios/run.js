@@ -53,11 +53,10 @@ function startScenarios(configurations) {
         const sellerBranchCode = configurations.sellerBranchCodes[Math.floor(configurations.sellerBranchCodes.length * Math.random())];
         try {
             // tslint:disable-next-line:insecure-random no-magic-numbers
-            // const duration = Math.floor(500000 * Math.random() + 300000);
-            const duration = 30;
+            const duration = Math.floor(500000 * Math.random() + 300000);
             const { transaction, order, numberOfTryAuthorizeCreditCard } = yield processPlaceOrder.main(sellerBranchCode, duration);
             result = {
-                processNumber: processNumber.toString(),
+                processNumber: processNumber,
                 transactionId: transaction.id,
                 startDate: now.toISOString(),
                 errorMessage: '',
@@ -74,7 +73,7 @@ function startScenarios(configurations) {
         }
         catch (error) {
             result = {
-                processNumber: processNumber.toString(),
+                processNumber: processNumber,
                 transactionId: '',
                 startDate: now.toISOString(),
                 errorMessage: error.message,
@@ -91,7 +90,7 @@ function startScenarios(configurations) {
         }
         log = `
 =============================== Transaction result ===============================
-processNumber                    : ${result.processNumber}
+processNumber                    : ${result.processNumber.toString()}
 transactionId                    : ${result.transactionId}
 startDate                        : ${result.startDate}
 errorMessage                     : ${result.errorMessage}
