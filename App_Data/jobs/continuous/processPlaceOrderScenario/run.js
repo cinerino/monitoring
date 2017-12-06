@@ -17,18 +17,19 @@ const createDebug = require("debug");
 const processPlaceOrder = require("../../../../controller/scenarios/processPlaceOrder");
 const mongooseConnectionOptions_1 = require("../../../../mongooseConnectionOptions");
 const debug = createDebug('sskts-monitoring-jobs');
+if (process.env.CONTINUOUS_SCENARIOS_STOPPED === '1') {
+    process.exit(0);
+}
+debug('start executing scenarios...');
+const INTERVAL = 60000;
 sskts.mongoose.connect(process.env.MONGOLAB_URI, mongooseConnectionOptions_1.default);
 const organizationRepo = new sskts.repository.Organization(sskts.mongoose.connection);
-organizationRepo.searchMovieTheaters({})
-    .then((movieTheaters) => {
+organizationRepo.searchMovieTheaters({}).then((movieTheaters) => {
     movieTheaters.forEach((movieTheater) => {
-        if (process.env.NODE_ENV === 'production') {
-            return;
-        }
         setInterval(() => {
-            // 0-60秒の間でランダムにインターバルを置いてシナリオを実行する
+            // 0-{INTERVAL}の間でランダムにインターバルを置いてシナリオを実行する
             // tslint:disable-next-line:insecure-random no-magic-numbers
-            const interval = Math.floor(60000 * Math.random());
+            const executesAfter = Math.floor(INTERVAL * Math.random());
             setTimeout(() => __awaiter(this, void 0, void 0, function* () {
                 try {
                     // tslint:disable-next-line:insecure-random no-magic-numbers
@@ -39,9 +40,7 @@ organizationRepo.searchMovieTheaters({})
                 catch (error) {
                     console.error(error, 'movieTheater.branchCode:', movieTheater.branchCode);
                 }
-            }), interval);
-        }, 
-        // tslint:disable-next-line:no-magic-numbers
-        60000);
+            }), executesAfter);
+        }, INTERVAL);
     });
 });
