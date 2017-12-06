@@ -59,7 +59,7 @@ function main(theaterCode, durationInMillisecond) {
             // tslint:disable-next-line:no-magic-numbers
             startThrough: moment().add(2, 'days').toDate()
         });
-        debug('individualScreeningEvents:', individualScreeningEvents);
+        debug('individualScreeningEvents length:', individualScreeningEvents.length);
         const availableEvents = individualScreeningEvents.filter((event) => (event.offer.availability !== 0));
         if (availableEvents.length === 0) {
             throw new Error('no available events');

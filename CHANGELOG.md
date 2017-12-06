@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 ## Unreleased
 ### Added
 - 継続的なシナリオを止めるフラグを環境変数に設定。
+- 注文取引シナリオ実行時の設定項目を追加。
 
 ### Changed
 
