@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - 注文取引シナリオ実行時の設定項目を追加。
 
 ### Changed
+- 注文取引シナリオ実行後のメール送信をオフに。
 
 ### Deprecated
 

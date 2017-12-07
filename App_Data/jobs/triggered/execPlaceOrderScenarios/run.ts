@@ -191,20 +191,20 @@ api endpoint  | ${configurations.apiEndpoint}
 - Please check out the csv report [here](${url}).
         `;
 
-    const emailMessage = sskts.factory.creativeWork.message.email.create({
-        identifier: 'identifier',
-        sender: {
-            name: 'SSKTS Report',
-            email: 'noreply@example.com'
-        },
-        toRecipient: {
-            name: 'motionpicture developers',
-            email: 'hello@motionpicture.jp'
-        },
-        about: subject,
-        text: text
-    });
-    await sskts.service.notification.sendEmail(emailMessage)();
+    // const emailMessage = sskts.factory.creativeWork.message.email.create({
+    //     identifier: 'identifier',
+    //     sender: {
+    //         name: 'SSKTS Report',
+    //         email: 'noreply@example.com'
+    //     },
+    //     toRecipient: {
+    //         name: 'motionpicture developers',
+    //         email: 'hello@motionpicture.jp'
+    //     },
+    //     about: subject,
+    //     text: text
+    // });
+    // await sskts.service.notification.sendEmail(emailMessage)();
 
     // backlogへ通知
     const users = await request.get(
