@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - 注文取引シナリオ実行後のメール送信をオフに。
 - フローデータ報告のx軸ラベルを時間表記に変更。
 - 取引成立率を取引離脱具合の表示に変更。
+- タスクのフローデータをタスク名別に集計するように変更。
 
 ### Deprecated
 
