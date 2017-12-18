@@ -24,9 +24,29 @@ interface IConfigurations {
      */
     intervals: number;
     /**
+     * 販売劇場枝番号リスト
+     */
+    sellerBranchCodes: string[];
+    /**
      * APIエンドポイント
      */
     apiEndpoint: string;
+}
+
+interface IResult {
+    processNumber: number;
+    transactionId: string;
+    startDate: string;
+    errorMessage: string;
+    errorStack: string;
+    errorName: string;
+    errorCode: string;
+    orderNumber: string;
+    orderDate: string;
+    paymentMethod: string;
+    paymentMethodId: string;
+    price: string;
+    numberOfTryAuthorizeCreditCard: string;
 }
 
 startScenarios({
@@ -34,6 +54,8 @@ startScenarios({
     numberOfTrials: (process.argv[2] !== undefined) ? parseInt(process.argv[2], 10) : 10,
     // tslint:disable-next-line:no-magic-numbers
     intervals: (process.argv[3] !== undefined) ? parseInt(process.argv[3], 10) : 1000,
+    // tslint:disable-next-line:no-magic-numbers
+    sellerBranchCodes: (process.argv[4] !== undefined) ? process.argv[4].split(',') : ['112', '118'],
     apiEndpoint: <string>process.env.SSKTS_API_ENDPOINT
 });
 
@@ -42,8 +64,10 @@ function startScenarios(configurations: IConfigurations) {
         throw new Error('Cannot start scenarios on a production environment.');
     }
 
-    const logs: any[] = [];
-    const results: any[] = [];
+    debug('starting scenarios...', configurations);
+
+    const logs: string[] = [];
+    const results: IResult[] = [];
     let numberOfProcesses = 0;
 
     const timer = setInterval(
@@ -58,17 +82,17 @@ function startScenarios(configurations: IConfigurations) {
             numberOfProcesses += 1;
             const processNumber = numberOfProcesses;
             let log = '';
-            let result;
+            let result: IResult;
             const now = new Date();
 
-            const theaterCodes = ['112', '118'];
+            // 販売者をランダムに選定
             // tslint:disable-next-line:insecure-random
-            const theaterCode = theaterCodes[Math.floor(theaterCodes.length * Math.random())];
+            const sellerBranchCode = configurations.sellerBranchCodes[Math.floor(configurations.sellerBranchCodes.length * Math.random())];
 
             try {
                 // tslint:disable-next-line:insecure-random no-magic-numbers
                 const duration = Math.floor(500000 * Math.random() + 300000);
-                const { transaction, order, numberOfTryAuthorizeCreditCard } = await processPlaceOrder.main(theaterCode, duration);
+                const { transaction, order, numberOfTryAuthorizeCreditCard } = await processPlaceOrder.main(sellerBranchCode, duration);
                 result = {
                     processNumber: processNumber,
                     transactionId: transaction.id,
@@ -148,37 +172,39 @@ async function reportResults(configurations: IConfigurations, results: any[]) {
 
     // upload csv
     const url = await sskts.service.util.uploadFile({
-        fileName: 'sskts-report-loadtest-placeOrderTransactions.csv',
+        fileName: `sskts-report-loadtest-placeOrderTransactions-${moment().format('YYYYMMDDhhmmss')}.csv`,
         text: csv,
-        expiryDate: moment().add(1, 'day').toDate()
+        // tslint:disable-next-line:no-magic-numbers
+        expiryDate: moment().add(3, 'months').toDate()
     })();
 
-    const text = `## Completion of SSKTS placeOrder transaction loadtest
+    const subject = 'Completion of SSKTS placeOrder transaction loadtest';
+    const text = `## ${subject}
 ### Configurations
 key  | value
 ------------- | -------------
 intervals  | ${configurations.intervals}
 number of trials  | ${configurations.numberOfTrials.toString()}
+seller branch codes  | ${configurations.sellerBranchCodes.join(',')}
 api endpoint  | ${configurations.apiEndpoint}
 ### Reports
 - Please check out the csv report [here](${url}).
         `;
 
-    const emailMessage = sskts.factory.creativeWork.message.email.create({
-        identifier: 'identifier',
-        sender: {
-            name: 'SSKTS Report',
-            email: 'noreply@example.com'
-        },
-        toRecipient: {
-            name: 'motionpicture developers',
-            email: 'hello@motionpicture.jp'
-        },
-        about: 'Completion of SSKTS placeOrder transaction loadtest',
-        text: text
-    });
-
-    await sskts.service.notification.sendEmail(emailMessage)();
+    // const emailMessage = sskts.factory.creativeWork.message.email.create({
+    //     identifier: 'identifier',
+    //     sender: {
+    //         name: 'SSKTS Report',
+    //         email: 'noreply@example.com'
+    //     },
+    //     toRecipient: {
+    //         name: 'motionpicture developers',
+    //         email: 'hello@motionpicture.jp'
+    //     },
+    //     about: subject,
+    //     text: text
+    // });
+    // await sskts.service.notification.sendEmail(emailMessage)();
 
     // backlogへ通知
     const users = await request.get(

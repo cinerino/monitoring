@@ -25,12 +25,15 @@ startScenarios({
     numberOfTrials: (process.argv[2] !== undefined) ? parseInt(process.argv[2], 10) : 10,
     // tslint:disable-next-line:no-magic-numbers
     intervals: (process.argv[3] !== undefined) ? parseInt(process.argv[3], 10) : 1000,
+    // tslint:disable-next-line:no-magic-numbers
+    sellerBranchCodes: (process.argv[4] !== undefined) ? process.argv[4].split(',') : ['112', '118'],
     apiEndpoint: process.env.SSKTS_API_ENDPOINT
 });
 function startScenarios(configurations) {
     if (process.env.NODE_ENV === 'production') {
         throw new Error('Cannot start scenarios on a production environment.');
     }
+    debug('starting scenarios...', configurations);
     const logs = [];
     const results = [];
     let numberOfProcesses = 0;
@@ -45,13 +48,13 @@ function startScenarios(configurations) {
         let log = '';
         let result;
         const now = new Date();
-        const theaterCodes = ['112', '118'];
+        // 販売者をランダムに選定
         // tslint:disable-next-line:insecure-random
-        const theaterCode = theaterCodes[Math.floor(theaterCodes.length * Math.random())];
+        const sellerBranchCode = configurations.sellerBranchCodes[Math.floor(configurations.sellerBranchCodes.length * Math.random())];
         try {
             // tslint:disable-next-line:insecure-random no-magic-numbers
             const duration = Math.floor(500000 * Math.random() + 300000);
-            const { transaction, order, numberOfTryAuthorizeCreditCard } = yield processPlaceOrder.main(theaterCode, duration);
+            const { transaction, order, numberOfTryAuthorizeCreditCard } = yield processPlaceOrder.main(sellerBranchCode, duration);
             result = {
                 processNumber: processNumber,
                 transactionId: transaction.id,
@@ -127,34 +130,37 @@ function reportResults(configurations, results) {
         });
         // upload csv
         const url = yield sskts.service.util.uploadFile({
-            fileName: 'sskts-report-loadtest-placeOrderTransactions.csv',
+            fileName: `sskts-report-loadtest-placeOrderTransactions-${moment().format('YYYYMMDDhhmmss')}.csv`,
             text: csv,
-            expiryDate: moment().add(1, 'day').toDate()
+            // tslint:disable-next-line:no-magic-numbers
+            expiryDate: moment().add(3, 'months').toDate()
         })();
-        const text = `## Completion of SSKTS placeOrder transaction loadtest
+        const subject = 'Completion of SSKTS placeOrder transaction loadtest';
+        const text = `## ${subject}
 ### Configurations
 key  | value
 ------------- | -------------
 intervals  | ${configurations.intervals}
 number of trials  | ${configurations.numberOfTrials.toString()}
+seller branch codes  | ${configurations.sellerBranchCodes.join(',')}
 api endpoint  | ${configurations.apiEndpoint}
 ### Reports
 - Please check out the csv report [here](${url}).
         `;
-        const emailMessage = sskts.factory.creativeWork.message.email.create({
-            identifier: 'identifier',
-            sender: {
-                name: 'SSKTS Report',
-                email: 'noreply@example.com'
-            },
-            toRecipient: {
-                name: 'motionpicture developers',
-                email: 'hello@motionpicture.jp'
-            },
-            about: 'Completion of SSKTS placeOrder transaction loadtest',
-            text: text
-        });
-        yield sskts.service.notification.sendEmail(emailMessage)();
+        // const emailMessage = sskts.factory.creativeWork.message.email.create({
+        //     identifier: 'identifier',
+        //     sender: {
+        //         name: 'SSKTS Report',
+        //         email: 'noreply@example.com'
+        //     },
+        //     toRecipient: {
+        //         name: 'motionpicture developers',
+        //         email: 'hello@motionpicture.jp'
+        //     },
+        //     about: subject,
+        //     text: text
+        // });
+        // await sskts.service.notification.sendEmail(emailMessage)();
         // backlogへ通知
         const users = yield request.get({
             url: `https://m-p.backlog.jp/api/v2/projects/SSKTS/users?apiKey=${process.env.BACKLOG_API_KEY}`,
