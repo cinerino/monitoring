@@ -90,92 +90,143 @@ export async function main() {
  * タスク実行試行回数を報告する
  */
 async function reportNumberOfTrialsOfTasks(telemetries: IGlobalFlowTelemetry[], measuredFrom: Date, measuredThrough: Date) {
-    const xLabels = createXLabels(measuredFrom, measuredThrough);
-    const params = {
-        ...defaultParams, ...{
-            chco: '79F67D,79CCF5,E96C6C',
-            chxt: 'x,y,y',
-            chd: 't:',
-            chxl: `0:|${xLabels.join('|')}|2:|回`,
-            chdl: '平均|最大|最小',
-            chs: '750x250'
-        }
-    };
-    params.chd += telemetries.map(
-        (telemetry) => {
-            return (telemetry.result.tasks !== undefined && telemetry.result.tasks.numberOfExecuted > 0)
-                ? Math.floor(telemetry.result.tasks.totalNumberOfTrials / telemetry.result.tasks.numberOfExecuted)
-                : 0;
-        }
-    ).join(',');
-    // tslint:disable-next-line:prefer-template
-    params.chd += '|' + telemetries.map(
-        (telemetry) => (telemetry.result.tasks !== undefined) ? telemetry.result.tasks.maxNumberOfTrials : 0
-    ).join(',');
-    // tslint:disable-next-line:prefer-template
-    params.chd += '|' + telemetries.map(
-        (telemetry) => (telemetry.result.tasks !== undefined) ? telemetry.result.tasks.minNumberOfTrials : 0
-    ).join(',');
-    const imageFullsize = await GoogleChart.publishUrl(params);
-    debug('imageFullsize:', imageFullsize);
+    const targetTaskNames = [
+        sskts.factory.taskName.CreateOrder,
+        sskts.factory.taskName.CreateOwnershipInfos,
+        sskts.factory.taskName.SendEmailNotification,
+        sskts.factory.taskName.SettleCreditCard,
+        sskts.factory.taskName.SettleMvtk,
+        sskts.factory.taskName.SettleSeatReservation
+    ];
 
-    await sskts.service.notification.report2developers(
-        'タスク実行試行回数',
-        '',
-        imageFullsize,
-        imageFullsize
-    )();
+    await Promise.all(targetTaskNames.map(async (taskName) => {
+        const xLabels = createXLabels(measuredFrom, measuredThrough);
+        const params = {
+            ...defaultParams, ...{
+                chco: '79F67D,79CCF5,E96C6C',
+                chxt: 'x,y,y',
+                chd: 't:',
+                chxl: `0:|${xLabels.join('|')}|2:|回`,
+                chdl: 'avg|max|min',
+                chs: '750x250'
+            }
+        };
+        params.chd += telemetries.map(
+            (telemetry) => {
+                if (!Array.isArray(telemetry.result.tasks)) {
+                    return 0;
+                }
+
+                const taskData = telemetry.result.tasks.find((t) => t.name === taskName);
+
+                return (taskData !== undefined && taskData.numberOfExecuted > 0)
+                    ? Math.floor(taskData.totalNumberOfTrials / taskData.numberOfExecuted)
+                    : 0;
+            }
+        ).join(',');
+        // tslint:disable-next-line:prefer-template
+        params.chd += '|' + telemetries.map(
+            (telemetry) => {
+                if (!Array.isArray(telemetry.result.tasks)) {
+                    return 0;
+                }
+                const taskData = telemetry.result.tasks.find((t) => t.name === taskName);
+
+                return (taskData !== undefined) ? taskData.maxNumberOfTrials : 0;
+            }
+        ).join(',');
+        // tslint:disable-next-line:prefer-template
+        params.chd += '|' + telemetries.map(
+            (telemetry) => {
+                if (!Array.isArray(telemetry.result.tasks)) {
+                    return 0;
+                }
+                const taskData = telemetry.result.tasks.find((t) => t.name === taskName);
+
+                return (taskData !== undefined) ? taskData.minNumberOfTrials : 0;
+            }
+        ).join(',');
+        const imageFullsize = await GoogleChart.publishUrl(params);
+        debug('url published.', imageFullsize);
+
+        await sskts.service.notification.report2developers(
+            `タスク実行試行回数\n${taskName}`,
+            '',
+            imageFullsize,
+            imageFullsize
+        )();
+    }));
 }
 
 /**
  * タスク待ち時間を報告する
  */
 async function reportLatenciesOfTasks(telemetries: IGlobalFlowTelemetry[], measuredFrom: Date, measuredThrough: Date) {
-    const xLabels = createXLabels(measuredFrom, measuredThrough);
-    const params = {
-        ...defaultParams, ...{
-            chco: '79F67D,79CCF5,E96C6C',
-            chxt: 'x,y,y',
-            chd: 't:',
-            chxl: `0:|${xLabels.join('|')}|2:|秒`,
-            chdl: '平均|最大|最小',
-            chs: '750x250'
-        }
-    };
-    params.chd += telemetries.map(
-        (telemetry) => {
-            const result = telemetry.result;
+    const targetTaskNames = [
+        sskts.factory.taskName.CreateOrder,
+        sskts.factory.taskName.CreateOwnershipInfos,
+        sskts.factory.taskName.SendEmailNotification,
+        sskts.factory.taskName.SettleCreditCard,
+        sskts.factory.taskName.SettleMvtk,
+        sskts.factory.taskName.SettleSeatReservation
+    ];
 
-            return (result.tasks !== undefined && result.tasks.numberOfExecuted > 0)
-                ? Math.floor(result.tasks.totalLatencyInMilliseconds / result.tasks.numberOfExecuted / KILOSECONDS)
-                : 0;
-        }
-    ).join(',');
-    // tslint:disable-next-line:prefer-template
-    params.chd += '|' + telemetries.map(
-        (telemetry) => {
-            return (telemetry.result.tasks !== undefined)
-                ? Math.floor(telemetry.result.tasks.maxLatencyInMilliseconds / KILOSECONDS)
-                : 0;
-        }
-    ).join(',');
-    // tslint:disable-next-line:prefer-template
-    params.chd += '|' + telemetries.map(
-        (telemetry) => {
-            return (telemetry.result.tasks !== undefined)
-                ? Math.floor(telemetry.result.tasks.minLatencyInMilliseconds / KILOSECONDS)
-                : 0;
-        }
-    ).join(',');
-    const imageFullsize = await GoogleChart.publishUrl(params);
-    debug('imageFullsize:', imageFullsize);
+    await Promise.all(targetTaskNames.map(async (taskName) => {
+        const xLabels = createXLabels(measuredFrom, measuredThrough);
+        const params = {
+            ...defaultParams, ...{
+                chco: '79F67D,79CCF5,E96C6C',
+                chxt: 'x,y,y',
+                chd: 't:',
+                chxl: `0:|${xLabels.join('|')}|2:|秒`,
+                chdl: 'avg|max|min',
+                chs: '750x250'
+            }
+        };
+        params.chd += telemetries.map(
+            (telemetry) => {
+                if (!Array.isArray(telemetry.result.tasks)) {
+                    return 0;
+                }
+                const taskData = telemetry.result.tasks.find((t) => t.name === taskName);
 
-    await sskts.service.notification.report2developers(
-        'タスク待ち時間',
-        '',
-        imageFullsize,
-        imageFullsize
-    )();
+                return (taskData !== undefined && taskData.numberOfExecuted > 0)
+                    ? Math.floor(taskData.totalLatencyInMilliseconds / taskData.numberOfExecuted)
+                    : 0;
+            }
+        ).join(',');
+        // tslint:disable-next-line:prefer-template
+        params.chd += '|' + telemetries.map(
+            (telemetry) => {
+                if (!Array.isArray(telemetry.result.tasks)) {
+                    return 0;
+                }
+                const taskData = telemetry.result.tasks.find((t) => t.name === taskName);
+
+                return (taskData !== undefined) ? taskData.maxLatencyInMilliseconds : 0;
+            }
+        ).join(',');
+        // tslint:disable-next-line:prefer-template
+        params.chd += '|' + telemetries.map(
+            (telemetry) => {
+                if (!Array.isArray(telemetry.result.tasks)) {
+                    return 0;
+                }
+                const taskData = telemetry.result.tasks.find((t) => t.name === taskName);
+
+                return (taskData !== undefined) ? taskData.minLatencyInMilliseconds : 0;
+            }
+        ).join(',');
+        const imageFullsize = await GoogleChart.publishUrl(params);
+        debug('url published.', imageFullsize);
+
+        await sskts.service.notification.report2developers(
+            `タスク待機時間\n${taskName}`,
+            '',
+            imageFullsize,
+            imageFullsize
+        )();
+    }));
 }
 
 /**
@@ -199,7 +250,7 @@ async function reportNumberOfTransactionsByStatuses(
     params.chd += `|${telemetries.map((telemetry) => telemetry.result.transactions.numberOfConfirmed).join(',')}`;
     params.chd += `|${telemetries.map((telemetry) => telemetry.result.transactions.numberOfExpired).join(',')}`;
     const imageFullsize = await GoogleChart.publishUrl(params);
-    debug('imageFullsize:', imageFullsize);
+    debug('url published.', imageFullsize);
 
     await sskts.service.notification.report2developers(
         `${sellerName}\n分あたりの開始取引数\n分あたりの成立取引数\n分あたりの離脱取引数`,
@@ -251,7 +302,7 @@ async function reportExpiredRatio(sellerName: string, telemetries: ISellerFlowTe
     params.chd += telemetriesBy5minutes.map((telemetry) => telemetry.numberOfStarted).join(',');
     params.chd += `|${telemetriesBy5minutes.map((telemetry) => telemetry.numberOfStartedAndExpired).join(',')}`;
     const imageFullsize = await GoogleChart.publishUrl(params);
-    debug('imageFullsize:', imageFullsize);
+    debug('url published.', imageFullsize);
 
     await sskts.service.notification.report2developers(
         `${sellerName}\n${AGGREGATION_UNIT_IN_MINUTES}分ごとの取引離脱率`,
@@ -274,7 +325,7 @@ async function reportTimeLeftUntilEvent(
             chxt: 'x,y,y',
             chd: 't:',
             chxl: `0:|${xLabels.join(' | ')}|2:|時間`,
-            chdl: '最大|平均|最小',
+            chdl: 'max|avg|min',
             chs: '750x250'
         }
     };
@@ -292,7 +343,7 @@ async function reportTimeLeftUntilEvent(
         (telemetry) => Math.floor(telemetry.result.transactions.minTimeLeftUntilEventInMilliseconds / HOUR_IN_MILLISECONDS)
     ).join(',');
     const imageFullsize = await GoogleChart.publishUrl(params);
-    debug('imageFullsize:', imageFullsize);
+    debug('url published.', imageFullsize);
 
     await sskts.service.notification.report2developers(
         `${sellerName}\n何時間前に予約したか`,
@@ -323,7 +374,7 @@ async function reportTransactionRequiredTimes(
         (telemetry) => Math.floor(telemetry.result.transactions.averageRequiredTimeInMilliseconds / KILOSECONDS) // ミリ秒→秒変換
     ).join(',');
     const imageFullsize = await GoogleChart.publishUrl(params);
-    debug('imageFullsize:', imageFullsize);
+    debug('url published.', imageFullsize);
 
     await sskts.service.notification.report2developers(
         `${sellerName}\n分ごとの平均取引所要時間`,
@@ -354,7 +405,7 @@ async function reportTransactionAmounts(
         (telemetry) => telemetry.result.transactions.averageAmount
     ).join(',');
     const imageFullsize = await GoogleChart.publishUrl(params);
-    debug('imageFullsize:', imageFullsize);
+    debug('url published.', imageFullsize);
 
     await sskts.service.notification.report2developers(
         `${sellerName}\n分ごとの平均取引金額`,
@@ -384,7 +435,7 @@ async function reportTransactionActions(
     params.chd += telemetries.map((telemetry) => telemetry.result.transactions.averageNumberOfActionsOnConfirmed).join(',');
     params.chd += `|${telemetries.map((telemetry) => telemetry.result.transactions.averageNumberOfActionsOnExpired).join(',')}`;
     const imageFullsize = await GoogleChart.publishUrl(params);
-    debug('imageFullsize:', imageFullsize);
+    debug('url published.', imageFullsize);
 
     await sskts.service.notification.report2developers(
         `${sellerName}\n分ごとの平均取引承認アクション数`,
