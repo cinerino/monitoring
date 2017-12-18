@@ -51,6 +51,7 @@ npm run build
 | `SSKTS_API_RESOURCE_SERVER_IDENTIFIER`     | true                  |                         | SSKTS APIリソースサーバー識別子      |
 | `SSKTS_API_ENDPOINT`                       | true                  |                         | SSKTS APIエンドポイント             |
 | `BACKLOG_API_KEY`                          | true                  |                         | バックログAPI key                 |
+| `CONTINUOUS_SCENARIOS_STOPPED`             | true                  | 1 or 0                  | 継続的なシナリオを止めるかどうか         |
 | `WEBSITE_NODE_DEFAULT_VERSION`             | only on Azure WebApps |                         | Node.js version              |
 | `WEBSITE_TIME_ZONE`                        | only on Azure WebApps |                         | Tokyo Standard Time          |
 
