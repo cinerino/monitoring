@@ -42,7 +42,7 @@ export async function main() {
     // tslint:disable-next-line:no-magic-numbers
     const measuredFrom = moment(dateNowByUnitTime).add(numberOfAggregationUnit * -telemetryUnitTimeInSeconds, 'seconds');
 
-    debug('reporting telemetries measuredFrom - dateTo...', measuredFrom, dateNowByUnitTime);
+    debug('reporting telemetries...', measuredFrom, '-', dateNowByUnitTime);
     const organizationRepo = new sskts.repository.Organization(sskts.mongoose.connection);
     const telemetryRepo = new sskts.repository.Telemetry(sskts.mongoose.connection);
 
@@ -62,32 +62,41 @@ export async function main() {
 
     sskts.mongoose.disconnect();
 
-    await reportLatenciesOfTasks(globalTelemetries); // タスク待機時間
-    await reportNumberOfTrialsOfTasks(globalTelemetries); // タスク試行回数
+    await reportLatenciesOfTasks(globalTelemetries, measuredFrom.toDate(), dateNowByUnitTime.toDate()); // タスク待機時間
+    await reportNumberOfTrialsOfTasks(globalTelemetries, measuredFrom.toDate(), dateNowByUnitTime.toDate()); // タスク試行回数
 
     // 販売者ごとにレポート送信
     await Promise.all(movieTheaters.map(async (movieTheater) => {
         debug('reporting...seller:', movieTheater.id);
         const telemetriesBySellerId = sellerTelemetries.filter((telemetry) => telemetry.object.sellerId === movieTheater.id);
-        await reportNumberOfTransactionsByStatuses(movieTheater.name.ja, telemetriesBySellerId); // ステータスごとの取引数
-        await reportConfirmedRatio(movieTheater.name.ja, telemetriesBySellerId);
-        await reportTimeLeftUntilEvent(movieTheater.name.ja, telemetriesBySellerId);
-        await reportTransactionRequiredTimes(movieTheater.name.ja, telemetriesBySellerId); // 平均所要時間
-        await reportTransactionAmounts(movieTheater.name.ja, telemetriesBySellerId); // 平均金額
-        await reportTransactionActions(movieTheater.name.ja, telemetriesBySellerId); // 平均アクション数
+        await reportNumberOfTransactionsByStatuses(
+            movieTheater.name.ja, telemetriesBySellerId, measuredFrom.toDate(), dateNowByUnitTime.toDate()); // ステータスごとの取引数
+        await reportExpiredRatio(movieTheater.name.ja, telemetriesBySellerId, measuredFrom.toDate(), dateNowByUnitTime.toDate()
+        );
+        await reportTimeLeftUntilEvent(movieTheater.name.ja, telemetriesBySellerId, measuredFrom.toDate(), dateNowByUnitTime.toDate());
+        await reportTransactionRequiredTimes(
+            movieTheater.name.ja, telemetriesBySellerId, measuredFrom.toDate(), dateNowByUnitTime.toDate()
+        ); // 平均所要時間
+        await reportTransactionAmounts(
+            movieTheater.name.ja, telemetriesBySellerId, measuredFrom.toDate(), dateNowByUnitTime.toDate()
+        ); // 平均金額
+        await reportTransactionActions(
+            movieTheater.name.ja, telemetriesBySellerId, measuredFrom.toDate(), dateNowByUnitTime.toDate()
+        ); // 平均アクション数
     }));
 }
 
 /**
  * タスク実行試行回数を報告する
  */
-async function reportNumberOfTrialsOfTasks(telemetries: IGlobalFlowTelemetry[]) {
+async function reportNumberOfTrialsOfTasks(telemetries: IGlobalFlowTelemetry[], measuredFrom: Date, measuredThrough: Date) {
+    const xLabels = createXLabels(measuredFrom, measuredThrough);
     const params = {
         ...defaultParams, ...{
             chco: '79F67D,79CCF5,E96C6C',
             chxt: 'x,y,y',
             chd: 't:',
-            chxl: '0:|12時間前|9時間前|6時間前|3時間前|0時間前|2:|回',
+            chxl: `0:|${xLabels.join('|')}|2:|回`,
             chdl: '平均|最大|最小',
             chs: '750x250'
         }
@@ -121,13 +130,14 @@ async function reportNumberOfTrialsOfTasks(telemetries: IGlobalFlowTelemetry[]) 
 /**
  * タスク待ち時間を報告する
  */
-async function reportLatenciesOfTasks(telemetries: IGlobalFlowTelemetry[]) {
+async function reportLatenciesOfTasks(telemetries: IGlobalFlowTelemetry[], measuredFrom: Date, measuredThrough: Date) {
+    const xLabels = createXLabels(measuredFrom, measuredThrough);
     const params = {
         ...defaultParams, ...{
             chco: '79F67D,79CCF5,E96C6C',
             chxt: 'x,y,y',
             chd: 't:',
-            chxl: '0:|12時間前|9時間前|6時間前|3時間前|0時間前|2:|秒',
+            chxl: `0:|${xLabels.join('|')}|2:|秒`,
             chdl: '平均|最大|最小',
             chs: '750x250'
         }
@@ -171,13 +181,16 @@ async function reportLatenciesOfTasks(telemetries: IGlobalFlowTelemetry[]) {
 /**
  * 状態別の取引数を報告する
  */
-async function reportNumberOfTransactionsByStatuses(sellerName: string, telemetries: ISellerFlowTelemetry[]) {
+async function reportNumberOfTransactionsByStatuses(
+    sellerName: string, telemetries: ISellerFlowTelemetry[], measuredFrom: Date, measuredThrough: Date
+) {
+    const xLabels = createXLabels(measuredFrom, measuredThrough);
     const params = {
         ...defaultParams, ...{
             chco: '79F67D,79CCF5,E96C6C',
             chxt: 'x,y',
             chd: 't:',
-            chxl: '0:|12時間前|9時間前|6時間前|3時間前|0時間前|2:|個',
+            chxl: `0:|${xLabels.join(' | ')}|2:|個`,
             chdl: '開始|成立|離脱',
             chs: '750x250'
         }
@@ -197,34 +210,51 @@ async function reportNumberOfTransactionsByStatuses(sellerName: string, telemetr
 }
 
 /**
- * 取引成立率を報告する
+ * 取引離脱率を報告する
  */
-async function reportConfirmedRatio(sellerName: string, telemetries: ISellerFlowTelemetry[]) {
+async function reportExpiredRatio(sellerName: string, telemetries: ISellerFlowTelemetry[], measuredFrom: Date, measuredThrough: Date) {
+    // 5分ごとのデータに再集計
+    const AGGREGATION_UNIT_IN_MINUTES = 5;
+    const telemetriesBy5minutes: {
+        numberOfStarted: number;
+        numberOfStartedAndExpired: number;
+    }[] = [];
+    let telemetryBy5minutest: {
+        numberOfStarted: number;
+        numberOfStartedAndExpired: number;
+    };
+    telemetries.forEach((telemetry, index) => {
+        if (index % AGGREGATION_UNIT_IN_MINUTES === 0) {
+            telemetryBy5minutest = {
+                numberOfStarted: 0,
+                numberOfStartedAndExpired: 0
+            };
+        }
+        telemetryBy5minutest.numberOfStarted += telemetry.result.transactions.numberOfStarted;
+        telemetryBy5minutest.numberOfStartedAndExpired += telemetry.result.transactions.numberOfStartedAndExpired;
+        if (index % AGGREGATION_UNIT_IN_MINUTES === AGGREGATION_UNIT_IN_MINUTES - 1 || index === telemetries.length - 1) {
+            telemetriesBy5minutes.push(telemetryBy5minutest);
+        }
+    });
+
+    const xLabels = createXLabels(measuredFrom, measuredThrough);
     const params = {
         ...defaultParams, ...{
-            chco: 'DAA8F5',
+            chco: '79CCF5,E96C6C',
             chxt: 'x,y',
             chd: 't:',
-            chxl: '0:|12時間前|9時間前|6時間前|3時間前|0時間前|2:|個',
-            chdl: '取引成立率',
+            chxl: `0:|${xLabels.join('|')}|2:|個`,
+            chdl: '開始|離脱',
             chs: '750x250'
         }
     };
-    params.chd += telemetries.map(
-        (telemetry) => {
-            const data = telemetry.result.transactions;
-
-            return (data.numberOfStartedAndConfirmed > 0 && data.numberOfStarted > 0)
-                // tslint:disable-next-line:no-magic-numbers
-                ? Math.floor(100 * data.numberOfStartedAndConfirmed / data.numberOfStarted)
-                : 0;
-        }
-    ).join(',');
+    params.chd += telemetriesBy5minutes.map((telemetry) => telemetry.numberOfStarted).join(',');
+    params.chd += `|${telemetriesBy5minutes.map((telemetry) => telemetry.numberOfStartedAndExpired).join(',')}`;
     const imageFullsize = await GoogleChart.publishUrl(params);
     debug('imageFullsize:', imageFullsize);
 
     await sskts.service.notification.report2developers(
-        `${sellerName}\n分ごとの取引成立率`,
+        `${sellerName}\n${AGGREGATION_UNIT_IN_MINUTES}分ごとの取引離脱率`,
         '',
         imageFullsize,
         imageFullsize
@@ -234,13 +264,16 @@ async function reportConfirmedRatio(sellerName: string, telemetries: ISellerFlow
 /**
  * イベント開始日時と取引成立日時の差を報告する
  */
-async function reportTimeLeftUntilEvent(sellerName: string, telemetries: ISellerFlowTelemetry[]) {
+async function reportTimeLeftUntilEvent(
+    sellerName: string, telemetries: ISellerFlowTelemetry[], measuredFrom: Date, measuredThrough: Date
+) {
+    const xLabels = createXLabels(measuredFrom, measuredThrough);
     const params = {
         ...defaultParams, ...{
             chco: 'E96C6C,79CCF5,79F67D',
             chxt: 'x,y,y',
             chd: 't:',
-            chxl: '0:|12時間前|9時間前|6時間前|3時間前|0時間前|2:|時間',
+            chxl: `0:|${xLabels.join(' | ')}|2:|時間`,
             chdl: '最大|平均|最小',
             chs: '750x250'
         }
@@ -272,13 +305,16 @@ async function reportTimeLeftUntilEvent(sellerName: string, telemetries: ISeller
 /**
  * 取引所要時間を報告する
  */
-async function reportTransactionRequiredTimes(sellerName: string, telemetries: ISellerFlowTelemetry[]) {
+async function reportTransactionRequiredTimes(
+    sellerName: string, telemetries: ISellerFlowTelemetry[], measuredFrom: Date, measuredThrough: Date
+) {
+    const xLabels = createXLabels(measuredFrom, measuredThrough);
     const params = {
         ...defaultParams, ...{
             chco: 'DAA8F5',
             chxt: 'x,y',
             chd: 't:',
-            chxl: '0:|12時間前|9時間前|6時間前|3時間前|0時間前|2:|秒',
+            chxl: `0:|${xLabels.join(' | ')}|2:|秒`,
             chdl: '所要時間',
             chs: '750x250'
         }
@@ -300,13 +336,16 @@ async function reportTransactionRequiredTimes(sellerName: string, telemetries: I
 /**
  * 取引金額を報告する
  */
-async function reportTransactionAmounts(sellerName: string, telemetries: ISellerFlowTelemetry[]) {
+async function reportTransactionAmounts(
+    sellerName: string, telemetries: ISellerFlowTelemetry[], measuredFrom: Date, measuredThrough: Date
+) {
+    const xLabels = createXLabels(measuredFrom, measuredThrough);
     const params = {
         ...defaultParams, ...{
             chco: 'DAA8F5',
             chxt: 'x,y',
             chd: 't:',
-            chxl: '0:|12時間前|9時間前|6時間前|3時間前|0時間前|2:|JPY',
+            chxl: `0:|${xLabels.join(' | ')}|2:|JPY`,
             chdl: '金額',
             chs: '750x250'
         }
@@ -328,13 +367,16 @@ async function reportTransactionAmounts(sellerName: string, telemetries: ISeller
 /**
  * 取引アクション数を報告する
  */
-async function reportTransactionActions(sellerName: string, telemetries: ISellerFlowTelemetry[]) {
+async function reportTransactionActions(
+    sellerName: string, telemetries: ISellerFlowTelemetry[], measuredFrom: Date, measuredThrough: Date
+) {
+    const xLabels = createXLabels(measuredFrom, measuredThrough);
     const params = {
         ...defaultParams, ...{
             chco: '79CCF5,E96C6C',
             chxt: 'x,y',
             chd: 't:',
-            chxl: '0:|12時間前|9時間前|6時間前|3時間前|0時間前|2:|個',
+            chxl: `0:|${xLabels.join(' | ')}|2:|個`,
             chdl: '成立|離脱',
             chs: '750x250'
         }
@@ -350,4 +392,13 @@ async function reportTransactionActions(sellerName: string, telemetries: ISeller
         imageFullsize,
         imageFullsize
     )();
+}
+
+function createXLabels(measuredFrom: Date, measuredThrough: Date) {
+    const diff = moment(measuredThrough).diff(moment(measuredFrom), 'hours');
+    const numberOfLabels = 6;
+
+    return Array.from(Array(numberOfLabels + 1)).map((__, index) => {
+        return moment(measuredFrom).add(diff / numberOfLabels * index, 'hours').format('H:mm');
+    });
 }
