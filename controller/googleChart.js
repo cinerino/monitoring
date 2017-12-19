@@ -29,7 +29,8 @@ function publishUrl(params) {
         debug('creating block blob... buffer.length:', buffer.length);
         // 3ヵ月有効なブロブ
         return sskts.service.util.uploadFile({
-            fileName: `sskts-monitoring-jobs-reportGMOSales-images-${moment().format('YYYYMMDDHHmmssSSS')}.png`,
+            // tslint:disable-next-line:insecure-random no-magic-numbers
+            fileName: `monitoring-jobs-google-chart-${moment().format('YYMMDDHHmmssSSS')}-${Math.floor(1000 * Math.random())}.png`,
             text: buffer,
             // tslint:disable-next-line:no-magic-numbers
             expiryDate: moment().add(parseInt(process.env.CHART_EXPIRES_IN_MONTH, 10), 'months').toDate()

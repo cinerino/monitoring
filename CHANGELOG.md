@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 ### Removed
 
 ### Fixed
+- チャート画像が上書きされるバグ解消。
 
 ### Security
 
