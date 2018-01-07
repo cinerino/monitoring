@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 ### Added
 
 ### Changed
+- 継続シナリオの間隔を環境変数で設定できるように変更。
 
 ### Deprecated
 

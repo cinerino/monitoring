@@ -17,7 +17,8 @@ if (process.env.CONTINUOUS_SCENARIOS_STOPPED === '1') {
 
 debug('start executing scenarios...');
 
-const INTERVAL = 60000;
+// tslint:disable-next-line:no-magic-numbers
+const INTERVAL = parseInt(<string>process.env.CONTINUOUS_SCENARIOS_INTERVAL_IN_SECONDS, 10) * 1000;
 sskts.mongoose.connect(<string>process.env.MONGOLAB_URI, mongooseConnectionOptions);
 const organizationRepo = new sskts.repository.Organization(sskts.mongoose.connection);
 organizationRepo.searchMovieTheaters({}).then((movieTheaters) => {
