@@ -25,7 +25,7 @@ function main() {
         const taskRepo = new sskts.repository.Task(sskts.mongoose.connection);
         const telemetryRepo = new sskts.repository.Telemetry(sskts.mongoose.connection);
         const transactionRepo = new sskts.repository.Transaction(sskts.mongoose.connection);
-        const authorizeActionRepo = new sskts.repository.action.Authorize(sskts.mongoose.connection);
+        const actionRepo = new sskts.repository.Action(sskts.mongoose.connection);
         debug('creating telemetry...');
         const dateNow = moment();
         // tslint:disable-next-line:no-magic-numbers
@@ -36,11 +36,11 @@ function main() {
             yield sskts.service.report.telemetry.createStock({
                 measuredAt: measuredAt.toDate(),
                 sellerId: movieTheater.id
-            })(taskRepo, telemetryRepo, transactionRepo, authorizeActionRepo);
+            })(taskRepo, telemetryRepo, transactionRepo, actionRepo);
         })));
         yield sskts.service.report.telemetry.createStock({
             measuredAt: measuredAt.toDate()
-        })(taskRepo, telemetryRepo, transactionRepo, authorizeActionRepo);
+        })(taskRepo, telemetryRepo, transactionRepo, actionRepo);
         sskts.mongoose.disconnect();
     });
 }

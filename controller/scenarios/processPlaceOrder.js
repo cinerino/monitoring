@@ -259,34 +259,6 @@ function main(theaterCode, durationInMillisecond) {
             transactionId: transaction.id
         });
         debug('confirmed. order:', order);
-        // send an email
-        const content = `Dear ${order.customer.name}
--------------------
-Thank you for the order below.
--------------------
-confirmationNumber: ${order.orderInquiryKey.confirmationNumber}
-telephone: ${order.orderInquiryKey.telephone}
-amount: ${order.price} yen
--------------------
-`;
-        debug('sending an email notification...', content);
-        yield placeOrderTransactions.sendEmailNotification({
-            transactionId: transaction.id,
-            emailMessageAttributes: {
-                sender: {
-                    name: transaction.seller.name,
-                    email: 'noreply@example.com'
-                },
-                toRecipient: {
-                    name: `${contact.familyName} ${contact.givenName}`,
-                    email: contact.email
-                },
-                // tslint:disable-next-line:max-line-length
-                about: `${individualScreeningEvent.superEvent.location.name.ja} Your order created [${individualScreeningEvent.superEvent.workPerformed.name}]`,
-                text: content
-            }
-        });
-        debug('an email sent');
         return { transaction, order, numberOfTryAuthorizeCreditCard };
     });
 }

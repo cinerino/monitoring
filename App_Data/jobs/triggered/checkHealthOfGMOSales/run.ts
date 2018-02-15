@@ -20,7 +20,7 @@ export async function main() {
     sskts.mongoose.connect(<string>process.env.MONGOLAB_URI, mongooseConnectionOptions);
 
     const gmoNotificationRepo = new sskts.repository.GMONotification(sskts.mongoose.connection);
-    const transactionRepo = new sskts.repository.Transaction(sskts.mongoose.connection);
+    const actionRepo = new sskts.repository.Action(sskts.mongoose.connection);
 
     const dateNow = moment();
     // tslint:disable-next-line:no-magic-numbers
@@ -28,7 +28,7 @@ export async function main() {
     // tslint:disable-next-line:no-magic-numbers
     const madeFrom = moment(madeThrough).add(-AGGREGATION_UNIT_TIME_IN_SECONDS, 'seconds').toDate();
 
-    const report = await sskts.service.report.health.checkGMOSales(madeFrom, madeThrough)(gmoNotificationRepo, transactionRepo);
+    const report = await sskts.service.report.health.checkGMOSales(madeFrom, madeThrough)(gmoNotificationRepo, actionRepo);
     debug('reportOfGMOSalesHealthCheck:', report);
 
     const subject = 'GMO売上健康診断';

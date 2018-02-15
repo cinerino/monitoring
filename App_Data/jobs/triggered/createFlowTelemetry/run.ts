@@ -19,7 +19,7 @@ export async function main() {
     const taskRepo = new sskts.repository.Task(sskts.mongoose.connection);
     const telemetryRepo = new sskts.repository.Telemetry(sskts.mongoose.connection);
     const transactionRepo = new sskts.repository.Transaction(sskts.mongoose.connection);
-    const authorizeActionRepo = new sskts.repository.action.Authorize(sskts.mongoose.connection);
+    const actionRepo = new sskts.repository.Action(sskts.mongoose.connection);
     debug('creating telemetry...');
 
     // 取引セッション時間に対して十分に時間を置いて計測する
@@ -34,12 +34,12 @@ export async function main() {
         await sskts.service.report.telemetry.createFlow({
             measuredAt: measuredAt.toDate(),
             sellerId: movieTheater.id
-        })(taskRepo, telemetryRepo, transactionRepo, authorizeActionRepo);
+        })(taskRepo, telemetryRepo, transactionRepo, actionRepo);
     }));
 
     await sskts.service.report.telemetry.createFlow({
         measuredAt: measuredAt.toDate()
-    })(taskRepo, telemetryRepo, transactionRepo, authorizeActionRepo);
+    })(taskRepo, telemetryRepo, transactionRepo, actionRepo);
 
     sskts.mongoose.disconnect();
 }
