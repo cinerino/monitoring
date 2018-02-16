@@ -90,14 +90,7 @@ export async function main() {
  * タスク実行試行回数を報告する
  */
 async function reportNumberOfTrialsOfTasks(telemetries: IGlobalFlowTelemetry[], measuredFrom: Date, measuredThrough: Date) {
-    const targetTaskNames = [
-        sskts.factory.taskName.CreateOrder,
-        sskts.factory.taskName.CreateOwnershipInfos,
-        sskts.factory.taskName.SendEmailNotification,
-        sskts.factory.taskName.SettleCreditCard,
-        sskts.factory.taskName.SettleMvtk,
-        sskts.factory.taskName.SettleSeatReservation
-    ];
+    const targetTaskNames = Object.keys(sskts.factory.taskName).map((k) => (<any>sskts.factory.taskName)[k]);
 
     await Promise.all(targetTaskNames.map(async (taskName) => {
         const xLabels = createXLabels(measuredFrom, measuredThrough);
@@ -162,14 +155,7 @@ async function reportNumberOfTrialsOfTasks(telemetries: IGlobalFlowTelemetry[], 
  * タスク待ち時間を報告する
  */
 async function reportLatenciesOfTasks(telemetries: IGlobalFlowTelemetry[], measuredFrom: Date, measuredThrough: Date) {
-    const targetTaskNames = [
-        sskts.factory.taskName.CreateOrder,
-        sskts.factory.taskName.CreateOwnershipInfos,
-        sskts.factory.taskName.SendEmailNotification,
-        sskts.factory.taskName.SettleCreditCard,
-        sskts.factory.taskName.SettleMvtk,
-        sskts.factory.taskName.SettleSeatReservation
-    ];
+    const targetTaskNames = Object.keys(sskts.factory.taskName).map((k) => (<any>sskts.factory.taskName)[k]);
 
     await Promise.all(targetTaskNames.map(async (taskName) => {
         const xLabels = createXLabels(measuredFrom, measuredThrough);

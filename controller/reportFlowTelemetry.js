@@ -79,14 +79,7 @@ exports.main = main;
  */
 function reportNumberOfTrialsOfTasks(telemetries, measuredFrom, measuredThrough) {
     return __awaiter(this, void 0, void 0, function* () {
-        const targetTaskNames = [
-            sskts.factory.taskName.CreateOrder,
-            sskts.factory.taskName.CreateOwnershipInfos,
-            sskts.factory.taskName.SendEmailNotification,
-            sskts.factory.taskName.SettleCreditCard,
-            sskts.factory.taskName.SettleMvtk,
-            sskts.factory.taskName.SettleSeatReservation
-        ];
+        const targetTaskNames = Object.keys(sskts.factory.taskName).map((k) => sskts.factory.taskName[k]);
         yield Promise.all(targetTaskNames.map((taskName) => __awaiter(this, void 0, void 0, function* () {
             const xLabels = createXLabels(measuredFrom, measuredThrough);
             const params = Object.assign({}, defaultParams, {
@@ -133,14 +126,7 @@ function reportNumberOfTrialsOfTasks(telemetries, measuredFrom, measuredThrough)
  */
 function reportLatenciesOfTasks(telemetries, measuredFrom, measuredThrough) {
     return __awaiter(this, void 0, void 0, function* () {
-        const targetTaskNames = [
-            sskts.factory.taskName.CreateOrder,
-            sskts.factory.taskName.CreateOwnershipInfos,
-            sskts.factory.taskName.SendEmailNotification,
-            sskts.factory.taskName.SettleCreditCard,
-            sskts.factory.taskName.SettleMvtk,
-            sskts.factory.taskName.SettleSeatReservation
-        ];
+        const targetTaskNames = Object.keys(sskts.factory.taskName).map((k) => sskts.factory.taskName[k]);
         yield Promise.all(targetTaskNames.map((taskName) => __awaiter(this, void 0, void 0, function* () {
             const xLabels = createXLabels(measuredFrom, measuredThrough);
             const params = Object.assign({}, defaultParams, {
