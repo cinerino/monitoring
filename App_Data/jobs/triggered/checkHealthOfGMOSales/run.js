@@ -43,7 +43,8 @@ unhealthy: ${report.unhealthGMOSales.length}/${report.numberOfSales}`;
 ${report.unhealthGMOSales.map((unhealthGMOSale) => `▲${unhealthGMOSale.orderId}\n${unhealthGMOSale.reason}`).join('\n')}`;
         }
         yield sskts.service.notification.report2developers(subject, content)();
-        sskts.mongoose.disconnect();
+        debug('diconnecting mongo...');
+        yield sskts.mongoose.disconnect();
     });
 }
 exports.main = main;

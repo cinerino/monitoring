@@ -41,7 +41,8 @@ export async function main() {
         measuredAt: measuredAt.toDate()
     })(taskRepo, telemetryRepo, transactionRepo, actionRepo);
 
-    sskts.mongoose.disconnect();
+    debug('diconnecting mongo...');
+    await sskts.mongoose.disconnect();
 }
 
 main().then(() => {

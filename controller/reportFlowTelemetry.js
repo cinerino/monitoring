@@ -57,7 +57,8 @@ function main() {
             measuredThrough: dateNowByUnitTime.toDate()
         })(telemetryRepo);
         debug('sellerTelemetries length:', sellerTelemetries.length);
-        sskts.mongoose.disconnect();
+        debug('diconnecting mongo...');
+        yield sskts.mongoose.disconnect();
         yield reportLatenciesOfTasks(globalTelemetries, measuredFrom.toDate(), dateNowByUnitTime.toDate()); // タスク待機時間
         yield reportNumberOfTrialsOfTasks(globalTelemetries, measuredFrom.toDate(), dateNowByUnitTime.toDate()); // タスク試行回数
         // 販売者ごとにレポート送信

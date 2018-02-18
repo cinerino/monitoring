@@ -60,7 +60,8 @@ export async function main() {
     })(telemetryRepo);
     debug('sellerTelemetries length:', sellerTelemetries.length);
 
-    sskts.mongoose.disconnect();
+    debug('diconnecting mongo...');
+    await sskts.mongoose.disconnect();
 
     await reportLatenciesOfTasks(globalTelemetries, measuredFrom.toDate(), dateNowByUnitTime.toDate()); // タスク待機時間
     await reportNumberOfTrialsOfTasks(globalTelemetries, measuredFrom.toDate(), dateNowByUnitTime.toDate()); // タスク試行回数

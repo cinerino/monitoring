@@ -44,7 +44,8 @@ ${report.unhealthGMOSales.map((unhealthGMOSale) => `▲${unhealthGMOSale.orderId
 
     await sskts.service.notification.report2developers(subject, content)();
 
-    sskts.mongoose.disconnect();
+    debug('diconnecting mongo...');
+    await sskts.mongoose.disconnect();
 }
 
 main().then(() => {

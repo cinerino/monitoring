@@ -56,7 +56,8 @@ function main() {
             measuredThrough: dateNowByUnitTime.toDate()
         })(telemetryRepo);
         debug('sellerTelemetries length:', sellerTelemetries.length);
-        sskts.mongoose.disconnect();
+        debug('diconnecting mongo...');
+        yield sskts.mongoose.disconnect();
         yield reportNumberOfTasksUnexecuted(globalTelemetries);
         // 販売者ごとにレポート送信
         yield Promise.all(movieTheaters.map((movieTheater) => __awaiter(this, void 0, void 0, function* () {

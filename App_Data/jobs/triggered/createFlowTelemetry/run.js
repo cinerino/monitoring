@@ -43,7 +43,8 @@ function main() {
         yield sskts.service.report.telemetry.createFlow({
             measuredAt: measuredAt.toDate()
         })(taskRepo, telemetryRepo, transactionRepo, actionRepo);
-        sskts.mongoose.disconnect();
+        debug('diconnecting mongo...');
+        yield sskts.mongoose.disconnect();
     });
 }
 exports.main = main;
