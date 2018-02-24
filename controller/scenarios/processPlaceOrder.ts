@@ -147,16 +147,8 @@ export async function main(theaterCode: string, durationInMillisecond: number) {
                 seatNumber: selectedSeatCode,
                 ticketInfo: {
                     ticketCode: selectedSalesTicket.ticketCode,
-                    // ticketName: selectedSalesTicket.ticketName,
-                    // ticketNameEng: selectedSalesTicket.ticketNameEng,
-                    // ticketNameKana: selectedSalesTicket.ticketNameKana,
-                    // stdPrice: selectedSalesTicket.stdPrice,
-                    // addPrice: selectedSalesTicket.addPrice,
-                    // disPrice: 0,
-                    // salePrice: selectedSalesTicket.salePrice,
                     mvtkAppPrice: 0,
                     ticketCount: 1,
-                    // seatNum: selectedSeatCode,
                     addGlasses: selectedSalesTicket.addGlasses,
                     kbnEisyahousiki: '00',
                     mvtkNum: '',
@@ -190,16 +182,8 @@ export async function main(theaterCode: string, durationInMillisecond: number) {
                 seatNumber: selectedSeatCode,
                 ticketInfo: {
                     ticketCode: selectedSalesTicket.ticketCode,
-                    // ticketName: selectedSalesTicket.ticketName,
-                    // ticketNameEng: selectedSalesTicket.ticketNameEng,
-                    // ticketNameKana: selectedSalesTicket.ticketNameKana,
-                    // stdPrice: selectedSalesTicket.stdPrice,
-                    // addPrice: selectedSalesTicket.addPrice,
-                    // disPrice: 0,
-                    // salePrice: selectedSalesTicket.salePrice,
                     mvtkAppPrice: 0,
                     ticketCount: 1,
-                    // seatNum: selectedSeatCode,
                     addGlasses: selectedSalesTicket.addGlasses,
                     kbnEisyahousiki: '00',
                     mvtkNum: '',
@@ -230,16 +214,8 @@ export async function main(theaterCode: string, durationInMillisecond: number) {
                 seatNumber: selectedSeatCode,
                 ticketInfo: {
                     ticketCode: selectedSalesTicket.ticketCode,
-                    // ticketName: selectedSalesTicket.ticketName,
-                    // ticketNameEng: selectedSalesTicket.ticketNameEng,
-                    // ticketNameKana: selectedSalesTicket.ticketNameKana,
-                    // stdPrice: selectedSalesTicket.stdPrice,
-                    // addPrice: selectedSalesTicket.addPrice,
-                    // disPrice: 0,
-                    // salePrice: selectedSalesTicket.salePrice,
                     mvtkAppPrice: 0,
                     ticketCount: 1,
-                    // seatNum: selectedSeatCode,
                     addGlasses: selectedSalesTicket.addGlasses,
                     kbnEisyahousiki: '00',
                     mvtkNum: '',
@@ -293,7 +269,7 @@ export async function main(theaterCode: string, durationInMillisecond: number) {
     debug('registering a customer contact...');
     const contact = {
         givenName: 'たろう',
-        familyName: 'てすと',
+        familyName: 'もーしょん',
         telephone: '09012345678',
         email: <string>process.env.SSKTS_DEVELOPER_EMAIL
     };
@@ -313,35 +289,6 @@ export async function main(theaterCode: string, durationInMillisecond: number) {
         transactionId: transaction.id
     });
     debug('confirmed. order:', order);
-
-    // send an email
-    const content = `Dear ${order.customer.name}
--------------------
-Thank you for the order below.
--------------------
-confirmationNumber: ${order.orderInquiryKey.confirmationNumber}
-telephone: ${order.orderInquiryKey.telephone}
-amount: ${order.price} yen
--------------------
-`;
-    debug('sending an email notification...', content);
-    await placeOrderTransactions.sendEmailNotification({
-        transactionId: transaction.id,
-        emailMessageAttributes: {
-            sender: {
-                name: transaction.seller.name,
-                email: 'noreply@example.com'
-            },
-            toRecipient: {
-                name: `${contact.familyName} ${contact.givenName}`,
-                email: contact.email
-            },
-            // tslint:disable-next-line:max-line-length
-            about: `${individualScreeningEvent.superEvent.location.name.ja} Your order created [${individualScreeningEvent.superEvent.workPerformed.name}]`,
-            text: content
-        }
-    });
-    debug('an email sent');
 
     return { transaction, order, numberOfTryAuthorizeCreditCard };
 }

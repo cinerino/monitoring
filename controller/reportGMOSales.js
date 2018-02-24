@@ -33,7 +33,8 @@ function main() {
         sskts.mongoose.connect(process.env.MONGOLAB_URI, mongooseConnectionOptions_1.default);
         yield reportGMOSalesAggregations();
         yield reportScatterChartInAmountAndTranDate();
-        sskts.mongoose.disconnect();
+        debug('diconnecting mongo...');
+        yield sskts.mongoose.disconnect();
     });
 }
 exports.main = main;

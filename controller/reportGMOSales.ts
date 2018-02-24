@@ -28,7 +28,8 @@ export async function main() {
     await reportGMOSalesAggregations();
     await reportScatterChartInAmountAndTranDate();
 
-    sskts.mongoose.disconnect();
+    debug('diconnecting mongo...');
+    await sskts.mongoose.disconnect();
 }
 
 /**

@@ -31,6 +31,14 @@ interface IConfigurations {
      * APIエンドポイント
      */
     apiEndpoint: string;
+    /**
+     * 最小購入セッション時間
+     */
+    minDurationInSeconds: number;
+    /**
+     * 最大購入セッション時間
+     */
+    maxDurationInSeconds: number;
 }
 
 interface IResult {
@@ -56,7 +64,11 @@ startScenarios({
     intervals: (process.argv[3] !== undefined) ? parseInt(process.argv[3], 10) : 1000,
     // tslint:disable-next-line:no-magic-numbers
     sellerBranchCodes: (process.argv[4] !== undefined) ? process.argv[4].split(',') : ['112', '118'],
-    apiEndpoint: <string>process.env.SSKTS_API_ENDPOINT
+    apiEndpoint: <string>process.env.SSKTS_API_ENDPOINT,
+    // tslint:disable-next-line:no-magic-numbers
+    minDurationInSeconds: (process.argv[5] !== undefined) ? parseInt(process.argv[5], 10) : 300,
+    // tslint:disable-next-line:no-magic-numbers
+    maxDurationInSeconds: (process.argv[6] !== undefined) ? parseInt(process.argv[6], 10) : 800
 });
 
 function startScenarios(configurations: IConfigurations) {
@@ -90,9 +102,15 @@ function startScenarios(configurations: IConfigurations) {
             const sellerBranchCode = configurations.sellerBranchCodes[Math.floor(configurations.sellerBranchCodes.length * Math.random())];
 
             try {
-                // tslint:disable-next-line:insecure-random no-magic-numbers
-                const duration = Math.floor(500000 * Math.random() + 300000);
-                const { transaction, order, numberOfTryAuthorizeCreditCard } = await processPlaceOrder.main(sellerBranchCode, duration);
+                const durationInSeconds = Math.floor(
+                    // tslint:disable-next-line:insecure-random
+                    (configurations.maxDurationInSeconds - configurations.minDurationInSeconds) * Math.random()
+                    + configurations.minDurationInSeconds
+                );
+                const { transaction, order, numberOfTryAuthorizeCreditCard } = await processPlaceOrder.main(
+                    // tslint:disable-next-line:no-magic-numbers
+                    sellerBranchCode, durationInSeconds * 1000
+                );
                 result = {
                     processNumber: processNumber,
                     transactionId: transaction.id,
@@ -179,6 +197,15 @@ async function reportResults(configurations: IConfigurations, results: any[]) {
     })();
 
     const subject = 'Completion of SSKTS placeOrder transaction loadtest';
+
+    const numbersOfResult = {
+        ok: results.filter((r) => r.orderNumber.length > 0).length,
+        clientError: results.filter((r) => /^4\d{2}$/.test(r.errorCode)).length,
+        serverError: results.filter((r) => /^5\d{2}$/.test(r.errorCode)).length,
+        unknown: results.filter((r) => r.orderNumber.length === 0 && r.errorCode.length === 0).length
+    };
+
+    const HUNDRED = 100;
     const text = `## ${subject}
 ### Configurations
 key  | value
@@ -187,6 +214,17 @@ intervals  | ${configurations.intervals}
 number of trials  | ${configurations.numberOfTrials.toString()}
 seller branch codes  | ${configurations.sellerBranchCodes.join(',')}
 api endpoint  | ${configurations.apiEndpoint}
+min duration  | ${configurations.minDurationInSeconds} seconds
+max duration  | ${configurations.maxDurationInSeconds} seconds
+
+### Summary
+status | ratio | number of results
+------------- | -------------
+ok | ${Math.floor(HUNDRED * numbersOfResult.ok / results.length)}% | ${numbersOfResult.ok}/${results.length}
+4xx  | ${Math.floor(HUNDRED * numbersOfResult.clientError / results.length)}% | ${numbersOfResult.clientError}/${results.length}
+5xx  | ${Math.floor(HUNDRED * numbersOfResult.serverError / results.length)}% | ${numbersOfResult.serverError}/${results.length}
+unknown | ${Math.floor(HUNDRED * numbersOfResult.unknown / results.length)}% | ${numbersOfResult.unknown}/${results.length}
+
 ### Reports
 - Please check out the csv report [here](${url}).
         `;

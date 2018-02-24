@@ -60,7 +60,8 @@ export async function main() {
     })(telemetryRepo);
     debug('sellerTelemetries length:', sellerTelemetries.length);
 
-    sskts.mongoose.disconnect();
+    debug('diconnecting mongo...');
+    await sskts.mongoose.disconnect();
 
     await reportLatenciesOfTasks(globalTelemetries, measuredFrom.toDate(), dateNowByUnitTime.toDate()); // タスク待機時間
     await reportNumberOfTrialsOfTasks(globalTelemetries, measuredFrom.toDate(), dateNowByUnitTime.toDate()); // タスク試行回数
@@ -90,14 +91,7 @@ export async function main() {
  * タスク実行試行回数を報告する
  */
 async function reportNumberOfTrialsOfTasks(telemetries: IGlobalFlowTelemetry[], measuredFrom: Date, measuredThrough: Date) {
-    const targetTaskNames = [
-        sskts.factory.taskName.CreateOrder,
-        sskts.factory.taskName.CreateOwnershipInfos,
-        sskts.factory.taskName.SendEmailNotification,
-        sskts.factory.taskName.SettleCreditCard,
-        sskts.factory.taskName.SettleMvtk,
-        sskts.factory.taskName.SettleSeatReservation
-    ];
+    const targetTaskNames = Object.keys(sskts.factory.taskName).map((k) => (<any>sskts.factory.taskName)[k]);
 
     await Promise.all(targetTaskNames.map(async (taskName) => {
         const xLabels = createXLabels(measuredFrom, measuredThrough);
@@ -162,14 +156,7 @@ async function reportNumberOfTrialsOfTasks(telemetries: IGlobalFlowTelemetry[], 
  * タスク待ち時間を報告する
  */
 async function reportLatenciesOfTasks(telemetries: IGlobalFlowTelemetry[], measuredFrom: Date, measuredThrough: Date) {
-    const targetTaskNames = [
-        sskts.factory.taskName.CreateOrder,
-        sskts.factory.taskName.CreateOwnershipInfos,
-        sskts.factory.taskName.SendEmailNotification,
-        sskts.factory.taskName.SettleCreditCard,
-        sskts.factory.taskName.SettleMvtk,
-        sskts.factory.taskName.SettleSeatReservation
-    ];
+    const targetTaskNames = Object.keys(sskts.factory.taskName).map((k) => (<any>sskts.factory.taskName)[k]);
 
     await Promise.all(targetTaskNames.map(async (taskName) => {
         const xLabels = createXLabels(measuredFrom, measuredThrough);
