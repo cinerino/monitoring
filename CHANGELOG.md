@@ -17,6 +17,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 ### Security
 
 
+## v4.0.1 - 2018-02-25
+### Fixed
+- タスク数集計でスロークエリが出ていたため、タスクコレクションのインデックスを最適化。
+
 ## v4.0.0 - 2018-02-24
 ### Added
 - 座席予約の空席率集計ジョブを実験的に設置。

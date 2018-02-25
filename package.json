@@ -10,7 +10,7 @@
   ],
   "dependencies": {
     "@motionpicture/sskts-api-nodejs-client": "^2.1.1",
-    "@motionpicture/sskts-domain": "^24.0.0-alpha.23",
+    "@motionpicture/sskts-domain": "^24.0.0-alpha.24",
     "debug": "^3.1.0",
     "json2csv": "^3.11.5",
     "moment": "^2.20.1",
@@ -53,5 +53,5 @@
     "version": "git add -A",
     "postversion": "git push origin --tags"
   },
-  "version": "4.0.0"
+  "version": "4.0.1"
 }
