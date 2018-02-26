@@ -17,6 +17,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 ### Security
 
 
+## v4.0.2 - 2018-02-26
+### Changed
+- update sskts-domain.
+
 ## v4.0.1 - 2018-02-25
 ### Fixed
 - タスク数集計でスロークエリが出ていたため、タスクコレクションのインデックスを最適化。
