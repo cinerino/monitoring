@@ -51,13 +51,13 @@ export async function main() {
     const globalTelemetries = await sskts.service.report.telemetry.searchGlobalFlow({
         measuredFrom: measuredFrom.toDate(),
         measuredThrough: dateNowByUnitTime.toDate()
-    })(telemetryRepo);
+    })({ telemetry: telemetryRepo });
     debug('globalTelemetries length:', globalTelemetries.length);
 
     const sellerTelemetries = await sskts.service.report.telemetry.searchSellerFlow({
         measuredFrom: measuredFrom.toDate(),
         measuredThrough: dateNowByUnitTime.toDate()
-    })(telemetryRepo);
+    })({ telemetry: telemetryRepo });
     debug('sellerTelemetries length:', sellerTelemetries.length);
 
     debug('diconnecting mongo...');

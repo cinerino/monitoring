@@ -30,7 +30,7 @@ function publishUrl(params) {
         // 3ヵ月有効なブロブ
         return sskts.service.util.uploadFile({
             // tslint:disable-next-line:insecure-random no-magic-numbers
-            fileName: `monitoring-jobs-google-chart-${moment().format('YYMMDDHHmmssSSS')}-${Math.floor(1000 * Math.random())}.png`,
+            fileName: `monitoring-jobs-google-chart-${moment().format('YYMMDDHHmmssSSS')}-${Math.floor(Math.random() * 1000)}.png`,
             text: buffer,
             // tslint:disable-next-line:no-magic-numbers
             expiryDate: moment().add(parseInt(process.env.CHART_EXPIRES_IN_MONTH, 10), 'months').toDate()

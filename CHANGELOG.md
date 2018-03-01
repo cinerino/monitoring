@@ -7,6 +7,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 ### Added
 
 ### Changed
+- update sskts-api-nodejs-client.
+- update sskts-domain.
 
 ### Deprecated
 
