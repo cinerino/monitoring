@@ -32,12 +32,22 @@ export async function main() {
         await sskts.service.report.telemetry.createStock({
             measuredAt: measuredAt.toDate(),
             sellerId: movieTheater.id
-        })(taskRepo, telemetryRepo, transactionRepo, actionRepo);
+        })({
+            task: taskRepo,
+            telemetry: telemetryRepo,
+            transaction: transactionRepo,
+            action: actionRepo
+        });
     }));
 
     await sskts.service.report.telemetry.createStock({
         measuredAt: measuredAt.toDate()
-    })(taskRepo, telemetryRepo, transactionRepo, actionRepo);
+    })({
+        task: taskRepo,
+        telemetry: telemetryRepo,
+        transaction: transactionRepo,
+        action: actionRepo
+    });
 
     debug('diconnecting mongo...');
     await sskts.mongoose.disconnect();

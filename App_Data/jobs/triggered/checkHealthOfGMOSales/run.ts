@@ -28,7 +28,10 @@ export async function main() {
     // tslint:disable-next-line:no-magic-numbers
     const madeFrom = moment(madeThrough).add(-AGGREGATION_UNIT_TIME_IN_SECONDS, 'seconds').toDate();
 
-    const report = await sskts.service.report.health.checkGMOSales(madeFrom, madeThrough)(gmoNotificationRepo, actionRepo);
+    const report = await sskts.service.report.health.checkGMOSales(madeFrom, madeThrough)({
+        gmoNotification: gmoNotificationRepo,
+        action: actionRepo
+    });
     debug('reportOfGMOSalesHealthCheck:', report);
 
     const subject = 'GMO売上健康診断';

@@ -31,7 +31,10 @@ function main() {
         const madeThrough = moment((dateNow.unix() - dateNow.unix() % 3600) * 1000).toDate();
         // tslint:disable-next-line:no-magic-numbers
         const madeFrom = moment(madeThrough).add(-AGGREGATION_UNIT_TIME_IN_SECONDS, 'seconds').toDate();
-        const report = yield sskts.service.report.health.checkGMOSales(madeFrom, madeThrough)(gmoNotificationRepo, actionRepo);
+        const report = yield sskts.service.report.health.checkGMOSales(madeFrom, madeThrough)({
+            gmoNotification: gmoNotificationRepo,
+            action: actionRepo
+        });
         debug('reportOfGMOSalesHealthCheck:', report);
         const subject = 'GMO売上健康診断';
         let content = `${moment(report.madeFrom).format('M/D H:mm')}-${moment(report.madeThrough).format('M/D H:mm')}

@@ -50,12 +50,12 @@ function main() {
         const globalTelemetries = yield sskts.service.report.telemetry.searchGlobalFlow({
             measuredFrom: measuredFrom.toDate(),
             measuredThrough: dateNowByUnitTime.toDate()
-        })(telemetryRepo);
+        })({ telemetry: telemetryRepo });
         debug('globalTelemetries length:', globalTelemetries.length);
         const sellerTelemetries = yield sskts.service.report.telemetry.searchSellerFlow({
             measuredFrom: measuredFrom.toDate(),
             measuredThrough: dateNowByUnitTime.toDate()
-        })(telemetryRepo);
+        })({ telemetry: telemetryRepo });
         debug('sellerTelemetries length:', sellerTelemetries.length);
         debug('diconnecting mongo...');
         yield sskts.mongoose.disconnect();

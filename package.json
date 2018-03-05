@@ -9,8 +9,8 @@
     }
   ],
   "dependencies": {
-    "@motionpicture/sskts-api-nodejs-client": "^2.1.2",
-    "@motionpicture/sskts-domain": "^24.0.0-alpha.27",
+    "@motionpicture/sskts-api-nodejs-client": "^3.0.0",
+    "@motionpicture/sskts-domain": "^24.0.0",
     "debug": "^3.1.0",
     "json2csv": "^3.11.5",
     "moment": "^2.20.1",
@@ -28,7 +28,7 @@
     "mocha": "^4.1.0",
     "nsp": "^2.8.1",
     "rimraf": "^2.6.2",
-    "snyk": "^1.69.9",
+    "snyk": "^1.69.10",
     "tslint": "^5.9.1",
     "tslint-microsoft-contrib": "^5.0.3",
     "typescript": "^2.7.2"
@@ -54,5 +54,5 @@
     "version": "git add -A",
     "postversion": "git push origin --tags"
   },
-  "version": "4.0.2"
+  "version": "4.1.0"
 }

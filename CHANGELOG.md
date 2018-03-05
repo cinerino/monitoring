@@ -17,6 +17,14 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 ### Security
 
 
+## v4.1.0 - 2018-03-05
+### Added
+- クレジットカードオーソリアクションデータ集計ジョブを追加。
+
+### Changed
+- update sskts-api-nodejs-client.
+- update sskts-domain.
+
 ## v4.0.2 - 2018-02-26
 ### Changed
 - update sskts-domain.

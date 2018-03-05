@@ -38,11 +38,21 @@ function main() {
             yield sskts.service.report.telemetry.createFlow({
                 measuredAt: measuredAt.toDate(),
                 sellerId: movieTheater.id
-            })(taskRepo, telemetryRepo, transactionRepo, actionRepo);
+            })({
+                task: taskRepo,
+                telemetry: telemetryRepo,
+                transaction: transactionRepo,
+                action: actionRepo
+            });
         })));
         yield sskts.service.report.telemetry.createFlow({
             measuredAt: measuredAt.toDate()
-        })(taskRepo, telemetryRepo, transactionRepo, actionRepo);
+        })({
+            task: taskRepo,
+            telemetry: telemetryRepo,
+            transaction: transactionRepo,
+            action: actionRepo
+        });
         debug('diconnecting mongo...');
         yield sskts.mongoose.disconnect();
     });

@@ -30,15 +30,15 @@ const auth = new sasaki.auth.ClientCredentials({
     ],
     state: 'teststate'
 });
-const events = sasaki.service.event({
+const events = new sasaki.service.Event({
     endpoint: process.env.SSKTS_API_ENDPOINT,
     auth: auth
 });
-const organizations = sasaki.service.organization({
+const organizations = new sasaki.service.Organization({
     endpoint: process.env.SSKTS_API_ENDPOINT,
     auth: auth
 });
-const placeOrderTransactions = sasaki.service.transaction.placeOrder({
+const placeOrderTransactions = new sasaki.service.transaction.PlaceOrder({
     endpoint: process.env.SSKTS_API_ENDPOINT,
     auth: auth
 });
