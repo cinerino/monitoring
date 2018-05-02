@@ -1,9 +1,11 @@
 # Changelog
+
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
+
 ### Added
 
 ### Changed
@@ -14,8 +16,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ### Fixed
 
-### Security
+- クレジットカード承認アクション集計のパフォーマンス改善(DBにインデックスを追加)
 
+### Security
 
 ## v4.1.0 - 2018-03-05
 ### Added
