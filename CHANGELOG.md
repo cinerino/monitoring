@@ -16,9 +16,13 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ### Fixed
 
-- クレジットカード承認アクション集計のパフォーマンス改善(DBにインデックスを追加)
-
 ### Security
+
+## v4.1.1 - 2018-05-02
+
+### Fixed
+
+- クレジットカード承認アクション集計のパフォーマンス改善(DBにインデックスを追加)
 
 ## v4.1.0 - 2018-03-05
 ### Added
