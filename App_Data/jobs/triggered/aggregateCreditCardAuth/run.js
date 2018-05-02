@@ -19,36 +19,44 @@ const moment = require("moment");
 const request = require("request-promise-native");
 const mongooseConnectionOptions_1 = require("../../../../mongooseConnectionOptions");
 const debug = createDebug('sskts-monitoring-jobs');
+const SUBJECT = 'クレジットカード承認アクション集計';
+const HUNDRED = 100;
+if (process.env.CREDIT_CARD_AUTH_AGGREGATION_PERIOD_IN_DAYS === undefined) {
+    throw new Error('Environment variable \'CREDIT_CARD_AUTH_AGGREGATION_PERIOD_IN_DAYS\' required.');
+}
+const AGGREGATION_PERIOD_IN_DAYS = parseInt(process.env.CREDIT_CARD_AUTH_AGGREGATION_PERIOD_IN_DAYS, 10);
 // tslint:disable-next-line:max-func-body-length
 function main() {
     return __awaiter(this, void 0, void 0, function* () {
         const actionRepo = new sskts.repository.Action(sskts.mongoose.connection);
+        // 一定期間のクレジットカード承認アクションを検索
         const aggregationStartThrough = new Date();
-        // tslint:disable-next-line:no-magic-numbers
-        const aggregationStartFrom = moment(aggregationStartThrough).add(-3, 'day').toDate();
+        const aggregationStartFrom = moment(aggregationStartThrough).add(-AGGREGATION_PERIOD_IN_DAYS, 'day').toDate();
+        debug('searching authorize actions...');
         const actions = yield actionRepo.actionModel.find({
             startDate: {
                 $gte: aggregationStartFrom,
                 $lt: aggregationStartThrough
             },
             typeOf: sskts.factory.actionType.AuthorizeAction,
-            'object.typeOf': sskts.factory.action.authorize.creditCard.ObjectType.CreditCard,
-            'purpose.id': { $exists: true }
+            'object.typeOf': sskts.factory.action.authorize.creditCard.ObjectType.CreditCard
         }).then((docs) => docs.map((doc) => doc.toObject()));
         debug(actions.length, 'action(s) found.');
+        // 失敗ステータスのアクションを検出
         const failedActions = actions.filter((a) => a.actionStatus === sskts.factory.actionStatusType.FailedActionStatus);
         debug('GMOServiceBadRequestError:', failedActions.filter((a) => a.error.name === 'GMOServiceBadRequestError').length);
+        // 失敗アクションについてエラー項目ごとにデータ整形
         const errorNames = [...new Set(failedActions.map((a) => a.error.name))];
         const errorMessages = [...new Set(failedActions.map((a) => a.error.message))];
         const contents = [...new Set(failedActions.filter((a) => Array.isArray(a.error.errors)).map((a) => a.error.errors[0].content))];
         const userMessages = [...new Set(failedActions.filter((a) => Array.isArray(a.error.errors)).map((a) => a.error.errors[0].userMessage))];
-        const subject = 'Aggregation of credit card authorize action';
-        const HUNDRED = 100;
+        // ステータスごとのアクション数を集計
         const numbersOfResult = {
             completed: actions.filter((a) => a.actionStatus === sskts.factory.actionStatusType.CompletedActionStatus).length,
             failed: actions.filter((a) => a.actionStatus === sskts.factory.actionStatusType.FailedActionStatus).length,
             canceled: actions.filter((a) => a.actionStatus === sskts.factory.actionStatusType.CanceledActionStatus).length
         };
+        // エラー名を集計
         const errorNamesSummary = errorNames.map((errorName) => {
             const count = failedActions.filter((a) => a.error.name === errorName).length;
             return {
@@ -58,6 +66,7 @@ function main() {
                 total: failedActions.length
             };
         }).sort((a, b) => b.ratio - a.ratio);
+        // エラーメッセージを集計
         const errorMessagesSummary = errorMessages.map((errorMessage) => {
             const count = failedActions.filter((a) => a.error.message === errorMessage).length;
             return {
@@ -67,6 +76,7 @@ function main() {
                 total: failedActions.length
             };
         }).sort((a, b) => b.ratio - a.ratio);
+        // GMOエラー内容を集計
         const contentSummary = contents.map((content) => {
             const count = failedActions.filter((a) => Array.isArray(a.error.errors) && a.error.errors[0].content === content).length;
             return {
@@ -76,6 +86,7 @@ function main() {
                 total: failedActions.length
             };
         }).sort((a, b) => b.ratio - a.ratio);
+        // GMOユーザー向けメッセージを集計
         const userMessagesSummary = userMessages.map((userMessage) => {
             const count = failedActions.filter((a) => Array.isArray(a.error.errors) && a.error.errors[0].userMessage === userMessage).length;
             return {
@@ -85,7 +96,7 @@ function main() {
                 total: failedActions.length
             };
         }).sort((a, b) => b.ratio - a.ratio);
-        const text = `## ${subject}
+        const text = `## ${SUBJECT}
 ### Configurations
 key  | value
 ------ | ------
@@ -120,16 +131,18 @@ ${userMessagesSummary.map((s) => `${s.key} | ${s.ratio}% | ${s.count}/${s.total}
         // return;
         // backlogへ通知
         const users = yield request.get({
-            url: `https://m-p.backlog.jp/api/v2/projects/SSKTS/users?apiKey=${process.env.BACKLOG_API_KEY}`,
-            json: true
+            url: 'https://m-p.backlog.jp/api/v2/projects/SSKTS/users',
+            json: true,
+            qs: { apiKey: process.env.BACKLOG_API_KEY }
         }).then((body) => body);
         debug('notifying', users.length, 'people on backlog...');
         yield request.post({
-            url: `https://m-p.backlog.jp/api/v2/issues/SSKTS-857/comments?apiKey=${process.env.BACKLOG_API_KEY}`,
+            url: 'https://m-p.backlog.jp/api/v2/issues/SSKTS-857/comments',
             form: {
                 content: text,
                 notifiedUserId: users.map((user) => user.id)
-            }
+            },
+            qs: { apiKey: process.env.BACKLOG_API_KEY }
         });
         debug('posted to backlog.');
     });
