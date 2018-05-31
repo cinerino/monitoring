@@ -39,7 +39,7 @@ function main() {
                 $lt: aggregationStartThrough
             },
             typeOf: sskts.factory.actionType.AuthorizeAction,
-            'object.typeOf': sskts.factory.action.authorize.creditCard.ObjectType.CreditCard
+            'object.typeOf': sskts.factory.action.authorize.paymentMethod.creditCard.ObjectType.CreditCard
         }).then((docs) => docs.map((doc) => doc.toObject()));
         debug(actions.length, 'action(s) found.');
         // 失敗ステータスのアクションを検出

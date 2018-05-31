@@ -109,6 +109,7 @@ function reportGMOSalesAggregations() {
         let aggregations = yield Promise.all(Array.from(Array(numberOfAggregationUnit)).map((__, index) => __awaiter(this, void 0, void 0, function* () {
             debug(index);
             const madeThrough = moment.unix((dateNowByUnitTime.unix() - (dateNowByUnitTime.unix() % aggregationUnitTimeInSeconds)))
+                // tslint:disable-next-line:no-magic-numbers
                 .add(index * -aggregationUnitTimeInSeconds, 'seconds').toDate();
             // tslint:disable-next-line:no-magic-numbers
             const madeFrom = moment(madeThrough).add(-aggregationUnitTimeInSeconds, 'seconds').toDate();
