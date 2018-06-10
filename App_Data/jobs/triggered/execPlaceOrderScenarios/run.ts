@@ -1,8 +1,6 @@
 /**
  * 注文シナリオリクエストを実行する
- * @ignore
  */
-
 import * as sskts from '@motionpicture/sskts-domain';
 import * as createDebug from 'debug';
 import * as json2csv from 'json2csv';
@@ -172,9 +170,12 @@ numberOfTryAuthorizeCreditCard   : ${result.numberOfTryAuthorizeCreditCard}
         configurations.intervals
     );
 }
-async function reportResults(configurations: IConfigurations, results: any[]) {
+/**
+ * シナリオ結果をBacklogへ報告する
+ */
+async function reportResults(configurations: IConfigurations, scenarioResults: IResult[]) {
     // sort result
-    results = results.sort((a, b) => (a.processNumber > b.processNumber) ? 1 : -1);
+    const results = scenarioResults.sort((a, b) => (a.processNumber > b.processNumber) ? 1 : -1);
 
     // csv作成
     const fields = Object.keys(results[0]);

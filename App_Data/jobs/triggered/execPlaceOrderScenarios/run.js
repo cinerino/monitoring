@@ -1,8 +1,4 @@
 "use strict";
-/**
- * 注文シナリオリクエストを実行する
- * @ignore
- */
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     return new (P || (P = Promise))(function (resolve, reject) {
         function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
@@ -12,6 +8,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+/**
+ * 注文シナリオリクエストを実行する
+ */
 const sskts = require("@motionpicture/sskts-domain");
 const createDebug = require("debug");
 const json2csv = require("json2csv");
@@ -121,10 +120,13 @@ numberOfTryAuthorizeCreditCard   : ${result.numberOfTryAuthorizeCreditCard}
         }
     }), configurations.intervals);
 }
-function reportResults(configurations, results) {
+/**
+ * シナリオ結果をBacklogへ報告する
+ */
+function reportResults(configurations, scenarioResults) {
     return __awaiter(this, void 0, void 0, function* () {
         // sort result
-        results = results.sort((a, b) => (a.processNumber > b.processNumber) ? 1 : -1);
+        const results = scenarioResults.sort((a, b) => (a.processNumber > b.processNumber) ? 1 : -1);
         // csv作成
         const fields = Object.keys(results[0]);
         const fieldNames = Object.keys(results[0]);
