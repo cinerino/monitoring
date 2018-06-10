@@ -68,7 +68,7 @@ jobs:
             npm run doc
   deploy2development:
     docker:
-      - image: circleci/node:8.4
+      - image: circleci/node:latest
     steps:
       - checkout
       - restore_cache:
@@ -80,7 +80,7 @@ jobs:
             git push development-staging $CIRCLE_BRANCH:master -f -v
   prerelease:
     docker:
-      - image: circleci/node:8.4
+      - image: circleci/node:latest
     steps:
       - checkout
       - restore_cache:
@@ -92,7 +92,7 @@ jobs:
             git push prerelease $CIRCLE_BRANCH:master -f -v
   deploy:
     docker:
-      - image: circleci/node:8.4
+      - image: circleci/node:latest
     steps:
       - checkout
       - restore_cache:

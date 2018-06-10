@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 ### Changed
 
 - update packages.
+- install sskts-domain@25.x.x
 
 ### Deprecated
 
