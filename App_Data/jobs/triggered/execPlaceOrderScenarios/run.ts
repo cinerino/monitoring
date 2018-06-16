@@ -41,6 +41,7 @@ interface IConfigurations {
 
 interface IResult {
     processNumber: number;
+    progress: string;
     transactionId: string;
     startDate: string;
     errorMessage: string;
@@ -69,6 +70,7 @@ startScenarios({
     maxDurationInSeconds: (process.argv[6] !== undefined) ? parseInt(process.argv[6], 10) : 800
 });
 
+// tslint:disable-next-line:max-func-body-length
 function startScenarios(configurations: IConfigurations) {
     if (process.env.NODE_ENV === 'production') {
         throw new Error('Cannot start scenarios on a production environment.');
@@ -105,12 +107,13 @@ function startScenarios(configurations: IConfigurations) {
                     (configurations.maxDurationInSeconds - configurations.minDurationInSeconds) * Math.random()
                     + configurations.minDurationInSeconds
                 );
-                const { transaction, order, numberOfTryAuthorizeCreditCard } = await processPlaceOrder.main(
+                const { progress, transaction, order, numberOfTryAuthorizeCreditCard } = await processPlaceOrder.main(
                     // tslint:disable-next-line:no-magic-numbers
                     sellerBranchCode, durationInSeconds * 1000
                 );
                 result = {
                     processNumber: processNumber,
+                    progress: progress,
                     transactionId: transaction.id,
                     startDate: now.toISOString(),
                     errorMessage: '',
@@ -127,12 +130,13 @@ function startScenarios(configurations: IConfigurations) {
             } catch (error) {
                 result = {
                     processNumber: processNumber,
+                    progress: error.progress,
                     transactionId: '',
                     startDate: now.toISOString(),
                     errorMessage: error.message,
                     errorStack: error.stack,
                     errorName: error.name,
-                    errorCode: error.code,
+                    errorCode: (error.code !== undefined) ? error.code : '',
                     orderNumber: '',
                     orderDate: '',
                     paymentMethod: '',
@@ -145,6 +149,7 @@ function startScenarios(configurations: IConfigurations) {
             log = `
 =============================== Transaction result ===============================
 processNumber                    : ${result.processNumber.toString()}
+progress                         : ${result.progress}
 transactionId                    : ${result.transactionId}
 startDate                        : ${result.startDate}
 errorMessage                     : ${result.errorMessage}
