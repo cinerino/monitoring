@@ -9,8 +9,8 @@
     }
   ],
   "dependencies": {
-    "@motionpicture/sskts-api-nodejs-client": "^3.3.0",
-    "@motionpicture/sskts-domain": "^25.2.0",
+    "@motionpicture/sskts-api-nodejs-client": "^4.2.0",
+    "@motionpicture/sskts-domain": "^26.1.2",
     "debug": "^3.1.0",
     "json2csv": "^3.11.5",
     "moment": "^2.22.2",

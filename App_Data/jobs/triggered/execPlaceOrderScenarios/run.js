@@ -25,7 +25,7 @@ startScenarios({
     // tslint:disable-next-line:no-magic-numbers
     intervals: (process.argv[3] !== undefined) ? parseInt(process.argv[3], 10) : 1000,
     // tslint:disable-next-line:no-magic-numbers
-    sellerBranchCodes: (process.argv[4] !== undefined) ? process.argv[4].split(',') : ['112', '118'],
+    sellerBranchCodes: (process.argv[4] !== undefined) ? process.argv[4].split(',') : ['101', '112', '116', '118', '119'],
     apiEndpoint: process.env.SSKTS_API_ENDPOINT,
     // tslint:disable-next-line:no-magic-numbers
     minDurationInSeconds: (process.argv[5] !== undefined) ? parseInt(process.argv[5], 10) : 300,

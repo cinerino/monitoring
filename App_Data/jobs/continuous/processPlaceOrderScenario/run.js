@@ -34,7 +34,7 @@ organizationRepo.searchMovieTheaters({}).then((movieTheaters) => {
             setTimeout(() => __awaiter(this, void 0, void 0, function* () {
                 try {
                     // tslint:disable-next-line:insecure-random no-magic-numbers
-                    const duration = Math.floor(500000 * Math.random() + 300000);
+                    const duration = Math.floor(Math.random() * 500000 + 300000);
                     const result = yield processPlaceOrder.main(movieTheater.location.branchCode, duration);
                     debug('result:', result, 'movieTheater.branchCode:', movieTheater.branchCode);
                 }
