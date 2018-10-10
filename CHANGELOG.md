@@ -18,6 +18,12 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ### Security
 
+## v4.2.1 - 2018-10-10
+
+### Changed
+
+- 監視報告スケジュールを調整。
+
 ## v4.2.0 - 2018-06-10
 
 ### Changed

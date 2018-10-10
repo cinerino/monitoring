@@ -41,6 +41,7 @@ interface IConfigurations {
 
 interface IResult {
     processNumber: number;
+    progress: string;
     transactionId: string;
     startDate: string;
     errorMessage: string;
@@ -61,7 +62,7 @@ startScenarios({
     // tslint:disable-next-line:no-magic-numbers
     intervals: (process.argv[3] !== undefined) ? parseInt(process.argv[3], 10) : 1000,
     // tslint:disable-next-line:no-magic-numbers
-    sellerBranchCodes: (process.argv[4] !== undefined) ? process.argv[4].split(',') : ['112', '118'],
+    sellerBranchCodes: (process.argv[4] !== undefined) ? process.argv[4].split(',') : ['101', '112', '116', '118', '119'],
     apiEndpoint: <string>process.env.SSKTS_API_ENDPOINT,
     // tslint:disable-next-line:no-magic-numbers
     minDurationInSeconds: (process.argv[5] !== undefined) ? parseInt(process.argv[5], 10) : 300,
@@ -69,6 +70,7 @@ startScenarios({
     maxDurationInSeconds: (process.argv[6] !== undefined) ? parseInt(process.argv[6], 10) : 800
 });
 
+// tslint:disable-next-line:max-func-body-length
 function startScenarios(configurations: IConfigurations) {
     if (process.env.NODE_ENV === 'production') {
         throw new Error('Cannot start scenarios on a production environment.');
@@ -105,12 +107,13 @@ function startScenarios(configurations: IConfigurations) {
                     (configurations.maxDurationInSeconds - configurations.minDurationInSeconds) * Math.random()
                     + configurations.minDurationInSeconds
                 );
-                const { transaction, order, numberOfTryAuthorizeCreditCard } = await processPlaceOrder.main(
+                const { progress, transaction, order, numberOfTryAuthorizeCreditCard } = await processPlaceOrder.main(
                     // tslint:disable-next-line:no-magic-numbers
                     sellerBranchCode, durationInSeconds * 1000
                 );
                 result = {
                     processNumber: processNumber,
+                    progress: progress,
                     transactionId: transaction.id,
                     startDate: now.toISOString(),
                     errorMessage: '',
@@ -127,12 +130,13 @@ function startScenarios(configurations: IConfigurations) {
             } catch (error) {
                 result = {
                     processNumber: processNumber,
+                    progress: error.progress,
                     transactionId: '',
                     startDate: now.toISOString(),
                     errorMessage: error.message,
                     errorStack: error.stack,
                     errorName: error.name,
-                    errorCode: error.code,
+                    errorCode: (error.code !== undefined) ? error.code : '',
                     orderNumber: '',
                     orderDate: '',
                     paymentMethod: '',
@@ -145,6 +149,7 @@ function startScenarios(configurations: IConfigurations) {
             log = `
 =============================== Transaction result ===============================
 processNumber                    : ${result.processNumber.toString()}
+progress                         : ${result.progress}
 transactionId                    : ${result.transactionId}
 startDate                        : ${result.startDate}
 errorMessage                     : ${result.errorMessage}

@@ -9,8 +9,8 @@
     }
   ],
   "dependencies": {
-    "@motionpicture/sskts-api-nodejs-client": "^3.1.0",
-    "@motionpicture/sskts-domain": "^25.0.1",
+    "@motionpicture/sskts-api-nodejs-client": "^4.2.0",
+    "@motionpicture/sskts-domain": "^26.1.2",
     "debug": "^3.1.0",
     "json2csv": "^3.11.5",
     "moment": "^2.22.2",
@@ -20,18 +20,18 @@
   "description": "SSKTS monitoring jobs.",
   "devDependencies": {
     "@types/debug": "0.0.29",
-    "@types/mocha": "^5.2.1",
-    "@types/request": "^2.47.0",
+    "@types/mocha": "^5.2.2",
+    "@types/request": "^2.47.1",
     "@types/request-promise-native": "^1.0.15",
     "ink-docstrap": "^1.3.2",
     "jsdoc": "^3.5.5",
     "mocha": "^5.2.0",
     "nsp": "^2.8.1",
     "rimraf": "^2.6.2",
-    "snyk": "^1.82.1",
+    "snyk": "^1.83.0",
     "tslint": "^5.10.0",
     "tslint-microsoft-contrib": "^5.0.3",
-    "typescript": "^2.9.1"
+    "typescript": "^2.9.2"
   },
   "engines": {
     "node": ">=8.0.0",
@@ -54,5 +54,5 @@
     "version": "git add -A",
     "postversion": "git push origin --tags"
   },
-  "version": "4.2.0"
+  "version": "4.2.1"
 }
