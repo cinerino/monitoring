@@ -18,6 +18,12 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ### Security
 
+## v4.2.2 - 2018-12-10
+
+### Changed
+
+- 注文取引シナリオ実行を全劇場に対応
+
 ## v4.2.1 - 2018-10-10
 
 ### Changed
