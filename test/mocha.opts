@@ -1,3 +1,4 @@
 --no-timeouts
 --recursive
 --reporter spec
+--exit
