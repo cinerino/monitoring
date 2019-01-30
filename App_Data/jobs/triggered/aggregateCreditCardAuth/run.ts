@@ -34,7 +34,7 @@ export async function main() {
             $lt: aggregationStartThrough
         },
         typeOf: sskts.factory.actionType.AuthorizeAction,
-        'object.typeOf': sskts.factory.action.authorize.paymentMethod.creditCard.ObjectType.CreditCard
+        'object.typeOf': sskts.factory.paymentMethodType.CreditCard
     }).then((docs) => docs.map((doc) => <sskts.factory.action.authorize.paymentMethod.creditCard.IAction>doc.toObject()));
     debug(actions.length, 'action(s) found.');
 

@@ -14,6 +14,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ### Removed
 
+- クレジットカード売上健康診断を削除
+- クレジットカード売上報告を削除
+
 ### Fixed
 
 ### Security
