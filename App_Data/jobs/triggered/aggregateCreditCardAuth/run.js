@@ -1,8 +1,4 @@
 "use strict";
-/**
- * クレジットカードオーソリアクションデータを集計する
- * @ignore
- */
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     return new (P || (P = Promise))(function (resolve, reject) {
         function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
@@ -12,10 +8,14 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+/**
+ * クレジットカードオーソリアクションデータを集計する
+ */
 const sskts = require("@motionpicture/sskts-domain");
 const createDebug = require("debug");
 // import * as fs from 'fs';
 const moment = require("moment");
+const mongoose = require("mongoose");
 const request = require("request-promise-native");
 const mongooseConnectionOptions_1 = require("../../../../mongooseConnectionOptions");
 const debug = createDebug('sskts-monitoring-jobs');
@@ -28,7 +28,7 @@ const AGGREGATION_PERIOD_IN_DAYS = parseInt(process.env.CREDIT_CARD_AUTH_AGGREGA
 // tslint:disable-next-line:max-func-body-length
 function main() {
     return __awaiter(this, void 0, void 0, function* () {
-        const actionRepo = new sskts.repository.Action(sskts.mongoose.connection);
+        const actionRepo = new sskts.repository.Action(mongoose.connection);
         // 一定期間のクレジットカード承認アクションを検索
         const aggregationStartThrough = new Date();
         const aggregationStartFrom = moment(aggregationStartThrough).add(-AGGREGATION_PERIOD_IN_DAYS, 'day').toDate();
@@ -100,7 +100,7 @@ function main() {
 ### Configurations
 key  | value
 ------ | ------
-databaseName  | ${sskts.mongoose.connection.db.databaseName}
+databaseName  | ${mongoose.connection.db.databaseName}
 集計対象期間  | ${aggregationStartFrom.toISOString()} - ${aggregationStartThrough.toISOString()}
 
 ### Summary
@@ -148,7 +148,7 @@ ${userMessagesSummary.map((s) => `${s.key} | ${s.ratio}% | ${s.count}/${s.total}
     });
 }
 exports.main = main;
-sskts.mongoose.connect(process.env.MONGOLAB_URI, mongooseConnectionOptions_1.default)
+mongoose.connect(process.env.MONGOLAB_URI, mongooseConnectionOptions_1.default)
     .then(() => __awaiter(this, void 0, void 0, function* () {
     try {
         yield main();
@@ -157,6 +157,6 @@ sskts.mongoose.connect(process.env.MONGOLAB_URI, mongooseConnectionOptions_1.def
     catch (error) {
         console.error(error);
     }
-    yield sskts.mongoose.disconnect();
+    yield mongoose.disconnect();
 }))
     .catch(console.error);

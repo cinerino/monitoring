@@ -1,9 +1,4 @@
 "use strict";
-/**
- * 座席予約の空席時間率を算出する
- * 実験的実装
- * @ignore
- */
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     return new (P || (P = Promise))(function (resolve, reject) {
         function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
@@ -13,10 +8,15 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+/**
+ * 座席予約の空席時間率を算出する
+ * 実験的実装
+ */
 const sskts = require("@motionpicture/sskts-domain");
 const createDebug = require("debug");
 const fs = require("fs");
 const moment = require("moment");
+const mongoose = require("mongoose");
 const mongooseConnectionOptions_1 = require("../../../../mongooseConnectionOptions");
 const debug = createDebug('sskts-monitoring-jobs');
 const TIME_UNIT = 'seconds';
@@ -24,9 +24,9 @@ const TIME_UNIT = 'seconds';
 function aggregateOfferAvailableHoursRateByScreen(theaterCode, screenBranchCode) {
     return __awaiter(this, void 0, void 0, function* () {
         // ここ1ヵ月の座席に対する上映イベントリストを取得
-        const placeRepo = new sskts.repository.Place(sskts.mongoose.connection);
-        const eventRepo = new sskts.repository.Event(sskts.mongoose.connection);
-        const orderRepo = new sskts.repository.Order(sskts.mongoose.connection);
+        const placeRepo = new sskts.repository.Place(mongoose.connection);
+        const eventRepo = new sskts.repository.Event(mongoose.connection);
+        const orderRepo = new sskts.repository.Order(mongoose.connection);
         const movieTheater = yield placeRepo.findMovieTheaterByBranchCode(theaterCode);
         const screeningRoom = movieTheater.containsPlace.find((p) => p.branchCode === screenBranchCode);
         if (screeningRoom === undefined) {
@@ -111,12 +111,12 @@ const promises = screenBranchCodes.map((screenBranchCode) => __awaiter(this, voi
         console.error(error);
     }
 }));
-sskts.mongoose.connect(process.env.MONGOLAB_URI, mongooseConnectionOptions_1.default);
+mongoose.connect(process.env.MONGOLAB_URI, mongooseConnectionOptions_1.default);
 Promise.all(promises).then(() => {
     debug('success!');
 }).catch((err) => {
     console.error(err);
     process.exit(1);
 }).then(() => {
-    sskts.mongoose.disconnect();
+    mongoose.disconnect();
 });

@@ -2,7 +2,7 @@
 /**
  * 注文取引シナリオ
  */
-import * as sasaki from '@motionpicture/sskts-api-nodejs-client';
+import * as ssktsapi from '@motionpicture/sskts-api-nodejs-client';
 import * as sskts from '@motionpicture/sskts-domain';
 import * as createDebug from 'debug';
 import * as moment from 'moment';
@@ -10,7 +10,7 @@ import * as util from 'util';
 
 const debug = createDebug('sskts-monitoring-jobs');
 
-const auth = new sasaki.auth.ClientCredentials({
+const auth = new ssktsapi.auth.ClientCredentials({
     domain: <string>process.env.SSKTS_API_AUTHORIZE_SERVER_DOMAIN,
     clientId: <string>process.env.SSKTS_API_CLIENT_ID,
     clientSecret: <string>process.env.SSKTS_API_CLIENT_SECRET,
@@ -22,17 +22,17 @@ const auth = new sasaki.auth.ClientCredentials({
     state: 'teststate'
 });
 
-const events = new sasaki.service.Event({
+const events = new ssktsapi.service.Event({
     endpoint: <string>process.env.SSKTS_API_ENDPOINT,
     auth: auth
 });
 
-const organizations = new sasaki.service.Organization({
+const sellers = new ssktsapi.service.Seller({
     endpoint: <string>process.env.SSKTS_API_ENDPOINT,
     auth: auth
 });
 
-const placeOrderTransactions = new sasaki.service.transaction.PlaceOrder({
+const placeOrderTransactions = new ssktsapi.service.transaction.PlaceOrder({
     endpoint: <string>process.env.SSKTS_API_ENDPOINT,
     auth: auth
 });
@@ -44,10 +44,11 @@ export async function main(theaterCode: string, durationInMillisecond: number) {
 
     try {
         // search movie theater organizations
-        const movieTheaterOrganization = await organizations.findMovieTheaterByBranchCode({
-            branchCode: theaterCode
+        const searchSellersResult = await sellers.search({
+            location: { branchCodes: [theaterCode] }
         });
-        if (movieTheaterOrganization === null) {
+        const movieTheaterOrganization = searchSellersResult.data.shift();
+        if (movieTheaterOrganization === undefined) {
             throw new Error('movie theater shop not open');
         }
         progress = `movie theater found. ${movieTheaterOrganization.id}`;
@@ -56,17 +57,19 @@ export async function main(theaterCode: string, durationInMillisecond: number) {
         // search screening events
         progress = 'searching events...';
         debug(progress);
-        const individualScreeningEvents = await events.searchIndividualScreeningEvent({
-            superEventLocationIdentifiers: [movieTheaterOrganization.identifier],
+        const searchEventsResult = await events.searchScreeningEvents({
+            typeOf: ssktsapi.factory.eventType.ScreeningEvent,
+            superEvent: { locationBranchCodes: [theaterCode] },
             startFrom: moment().toDate(),
             // tslint:disable-next-line:no-magic-numbers
             startThrough: moment().add(2, 'days').toDate()
         });
-        progress = `${individualScreeningEvents.length} events found.`;
+        const screeningEvents = searchEventsResult.data;
+        progress = `${screeningEvents.length} events found.`;
         debug(progress);
 
-        const availableEvents = individualScreeningEvents.filter(
-            (event) => (event.offer.availability !== 0)
+        const availableEvents = screeningEvents.filter(
+            (event) => ((<any>event).offer.availability !== 0)
         );
         if (availableEvents.length === 0) {
             throw new Error('No available events');
@@ -79,18 +82,18 @@ export async function main(theaterCode: string, durationInMillisecond: number) {
         const availableEvent = availableEvents[Math.floor(availableEvents.length * Math.random())];
 
         // retrieve an event detail
-        const individualScreeningEvent = await events.findIndividualScreeningEvent({
-            identifier: availableEvent.identifier
-        });
-        if (individualScreeningEvent === null) {
+
+        const screeningEvent = await events.findScreeningEventById(availableEvent);
+        if (screeningEvent === null) {
             throw new Error('Specified screening event not found');
         }
+        const coaInfo = <ssktsapi.factory.event.screeningEvent.ICOAInfo>screeningEvent.coaInfo;
 
-        const dateJouei = individualScreeningEvent.coaInfo.dateJouei;
-        const titleCode = individualScreeningEvent.coaInfo.titleCode;
-        const titleBranchNum = individualScreeningEvent.coaInfo.titleBranchNum;
-        const timeBegin = individualScreeningEvent.coaInfo.timeBegin;
-        const screenCode = individualScreeningEvent.coaInfo.screenCode;
+        const dateJouei = coaInfo.dateJouei;
+        const titleCode = coaInfo.titleCode;
+        const titleBranchNum = coaInfo.titleBranchNum;
+        const timeBegin = coaInfo.timeBegin;
+        const screenCode = coaInfo.screenCode;
 
         // start a transaction
         progress = 'starting a transaction...';
@@ -147,7 +150,7 @@ export async function main(theaterCode: string, durationInMillisecond: number) {
         debug(progress);
         let seatReservationAuthorization = await placeOrderTransactions.createSeatReservationAuthorization({
             transactionId: transaction.id,
-            eventIdentifier: individualScreeningEvent.identifier,
+            eventIdentifier: screeningEvent.identifier,
             offers: [
                 {
                     seatSection: sectionCode,
@@ -185,7 +188,7 @@ export async function main(theaterCode: string, durationInMillisecond: number) {
         debug(progress);
         seatReservationAuthorization = await placeOrderTransactions.createSeatReservationAuthorization({
             transactionId: transaction.id,
-            eventIdentifier: individualScreeningEvent.identifier,
+            eventIdentifier: screeningEvent.identifier,
             offers: [
                 {
                     seatSection: sectionCode,
@@ -219,7 +222,7 @@ export async function main(theaterCode: string, durationInMillisecond: number) {
         seatReservationAuthorization = await placeOrderTransactions.changeSeatReservationOffers({
             transactionId: transaction.id,
             actionId: seatReservationAuthorization.id,
-            eventIdentifier: individualScreeningEvent.identifier,
+            eventIdentifier: screeningEvent.identifier,
             offers: [
                 {
                     seatSection: sectionCode,

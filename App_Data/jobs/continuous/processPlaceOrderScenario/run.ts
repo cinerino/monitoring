@@ -1,10 +1,9 @@
 /**
  * 注文シナリオをランダムに実行し続ける
- * @ignore
  */
-
 import * as sskts from '@motionpicture/sskts-domain';
 import * as createDebug from 'debug';
+import * as mongoose from 'mongoose';
 
 import * as processPlaceOrder from '../../../../controller/scenarios/processPlaceOrder';
 import mongooseConnectionOptions from '../../../../mongooseConnectionOptions';
@@ -19,9 +18,9 @@ debug('start executing scenarios...');
 
 // tslint:disable-next-line:no-magic-numbers
 const INTERVAL = parseInt(<string>process.env.CONTINUOUS_SCENARIOS_INTERVAL_IN_SECONDS, 10) * 1000;
-sskts.mongoose.connect(<string>process.env.MONGOLAB_URI, mongooseConnectionOptions);
-const organizationRepo = new sskts.repository.Organization(sskts.mongoose.connection);
-organizationRepo.searchMovieTheaters({}).then((movieTheaters) => {
+mongoose.connect(<string>process.env.MONGOLAB_URI, mongooseConnectionOptions);
+const sellerRepo = new sskts.repository.Seller(mongoose.connection);
+sellerRepo.search({}).then((movieTheaters) => {
     movieTheaters.forEach((movieTheater) => {
         setInterval(
             () => {
@@ -31,13 +30,15 @@ organizationRepo.searchMovieTheaters({}).then((movieTheaters) => {
 
                 setTimeout(
                     async () => {
+                        const branchCode = (<any>movieTheater.location).branchCode;
+
                         try {
                             // tslint:disable-next-line:insecure-random no-magic-numbers
                             const duration = Math.floor(Math.random() * 500000 + 300000);
-                            const result = await processPlaceOrder.main(movieTheater.location.branchCode, duration);
-                            debug('result:', result, 'movieTheater.branchCode:', movieTheater.branchCode);
+                            const result = await processPlaceOrder.main(branchCode, duration);
+                            debug('result:', result, 'movieTheater.branchCode:', branchCode);
                         } catch (error) {
-                            console.error(error, 'movieTheater.branchCode:', movieTheater.branchCode);
+                            console.error(error, 'movieTheater.branchCode:', branchCode);
                         }
                     },
                     executesAfter

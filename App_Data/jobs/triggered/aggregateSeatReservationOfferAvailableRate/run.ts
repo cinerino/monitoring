@@ -1,13 +1,12 @@
 /**
  * 座席予約の空席時間率を算出する
  * 実験的実装
- * @ignore
  */
-
 import * as sskts from '@motionpicture/sskts-domain';
 import * as createDebug from 'debug';
 import * as fs from 'fs';
 import * as moment from 'moment';
+import * as mongoose from 'mongoose';
 
 import mongooseConnectionOptions from '../../../../mongooseConnectionOptions';
 
@@ -18,9 +17,9 @@ const TIME_UNIT: moment.unitOfTime.Diff = 'seconds';
 // tslint:disable-next-line:max-func-body-length
 export async function aggregateOfferAvailableHoursRateByScreen(theaterCode: string, screenBranchCode: string) {
     // ここ1ヵ月の座席に対する上映イベントリストを取得
-    const placeRepo = new sskts.repository.Place(sskts.mongoose.connection);
-    const eventRepo = new sskts.repository.Event(sskts.mongoose.connection);
-    const orderRepo = new sskts.repository.Order(sskts.mongoose.connection);
+    const placeRepo = new sskts.repository.Place(mongoose.connection);
+    const eventRepo = new sskts.repository.Event(mongoose.connection);
+    const orderRepo = new sskts.repository.Order(mongoose.connection);
 
     const movieTheater = await placeRepo.findMovieTheaterByBranchCode(theaterCode);
     const screeningRoom = movieTheater.containsPlace.find((p) => p.branchCode === screenBranchCode);
@@ -127,7 +126,7 @@ const promises = screenBranchCodes.map(async (screenBranchCode) => {
     }
 });
 
-sskts.mongoose.connect(<string>process.env.MONGOLAB_URI, mongooseConnectionOptions);
+mongoose.connect(<string>process.env.MONGOLAB_URI, mongooseConnectionOptions);
 
 Promise.all(promises).then(() => {
     debug('success!');
@@ -135,5 +134,5 @@ Promise.all(promises).then(() => {
     console.error(err);
     process.exit(1);
 }).then(() => {
-    sskts.mongoose.disconnect();
+    mongoose.disconnect();
 });
