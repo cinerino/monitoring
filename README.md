@@ -1,4 +1,4 @@
-# SSKTS 監視ジョブアプリケーション
+# Cinema Sunshine Monitoring Jobs
 
 ## Getting Started
 
@@ -42,7 +42,8 @@ npm run build
 | `COA_ENDPOINT`                                | true                  |                         | COA API endpoint                       |
 | `COA_REFRESH_TOKEN`                           | true                  |                         | COA API refresh token                  |
 | `SSKTS_DEVELOPER_EMAIL`                       | true                  |                         | 開発者通知用メールアドレス             |
-| `SSKTS_DEVELOPER_LINE_NOTIFY_ACCESS_TOKEN`    | true                  |                         | LINE Notifyでのレポート通知            |
+| `DEVELOPER_LINE_NOTIFY_ACCESS_TOKEN`          | true                  |                         | LINE Notifyでのレポート通知            |
+| `LINE_NOTIFY_URL`                             | true                  |                         | https://notify-api.line.me/api/notify  |
 | `AZURE_STORAGE_CONNECTION_STRING`             | true                  |                         | Save charts on azure storage           |
 | `CHART_EXPIRES_IN_MONTH`                      | true                  |                         | チャート表示有効期間(ヵ月)             |
 | `SSKTS_API_CLIENT_ID`                         | true                  |                         | SSKTS APIクライアントID                |
@@ -65,10 +66,6 @@ npm run build
 
 `npm run check`でチェック実行。
 
-## パッケージ脆弱性のチェック
-
-* [nsp](https://www.npmjs.com/package/nsp)
-
 ## clean
 
 `npm run clean`で不要なソース削除。
@@ -76,7 +73,3 @@ npm run build
 ## テスト
 
 `npm test`でテスト実行。
-
-## ドキュメント
-
-`npm run doc`でjsdocが作成されます。

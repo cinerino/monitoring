@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 ### Changed
 
 - install @motionpicture/sskts-domain@28.0.0
+- install @motionpicture/sskts-api-nodejs-client@6.0.0
 
 ### Deprecated
 
