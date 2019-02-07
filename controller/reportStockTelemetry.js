@@ -1,8 +1,4 @@
 "use strict";
-/**
- * ストック測定データを報告する
- * @ignore
- */
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     return new (P || (P = Promise))(function (resolve, reject) {
         function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
@@ -12,9 +8,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+/**
+ * ストック測定データを報告する
+ */
 const sskts = require("@motionpicture/sskts-domain");
 const createDebug = require("debug");
 const moment = require("moment");
+const mongoose = require("mongoose");
 const mongooseConnectionOptions_1 = require("../mongooseConnectionOptions");
 const GoogleChart = require("./googleChart");
 const debug = createDebug('sskts-monitoring-jobs');
@@ -32,7 +32,7 @@ const defaultParams = {
 function main() {
     return __awaiter(this, void 0, void 0, function* () {
         debug('connecting mongodb...');
-        sskts.mongoose.connect(process.env.MONGOLAB_URI, mongooseConnectionOptions_1.default);
+        mongoose.connect(process.env.MONGOLAB_URI, mongooseConnectionOptions_1.default);
         // 集計単位数分の集計を行う
         const telemetryUnitTimeInSeconds = 60; // 集計単位時間(秒)
         const numberOfAggregationUnit = 720; // 集計単位数
@@ -43,9 +43,9 @@ function main() {
         // tslint:disable-next-line:no-magic-numbers
         const measuredFrom = moment(dateNowByUnitTime).add(numberOfAggregationUnit * -telemetryUnitTimeInSeconds, 'seconds');
         debug('reporting telemetries measuredFrom - dateTo...', measuredFrom, dateNowByUnitTime);
-        const organizationRepo = new sskts.repository.Organization(sskts.mongoose.connection);
-        const telemetryRepo = new sskts.repository.Telemetry(sskts.mongoose.connection);
-        const movieTheaters = yield organizationRepo.searchMovieTheaters({});
+        const sellerRepo = new sskts.repository.Seller(mongoose.connection);
+        const telemetryRepo = new sskts.repository.Telemetry(mongoose.connection);
+        const movieTheaters = yield sellerRepo.search({});
         const globalTelemetries = yield sskts.service.report.telemetry.searchGlobalStock({
             measuredFrom: measuredFrom.toDate(),
             measuredThrough: dateNowByUnitTime.toDate()
@@ -57,7 +57,7 @@ function main() {
         })({ telemetry: telemetryRepo });
         debug('sellerTelemetries length:', sellerTelemetries.length);
         debug('diconnecting mongo...');
-        yield sskts.mongoose.disconnect();
+        yield mongoose.disconnect();
         yield reportNumberOfTasksUnexecuted(globalTelemetries);
         // 販売者ごとにレポート送信
         yield Promise.all(movieTheaters.map((movieTheater) => __awaiter(this, void 0, void 0, function* () {

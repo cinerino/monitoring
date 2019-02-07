@@ -1,8 +1,4 @@
 "use strict";
-/**
- * グローバル測定データを作成する
- * @ignore
- */
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     return new (P || (P = Promise))(function (resolve, reject) {
         function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
@@ -12,26 +8,30 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+/**
+ * グローバル測定データを作成する
+ */
 const sskts = require("@motionpicture/sskts-domain");
 const createDebug = require("debug");
 const moment = require("moment");
+const mongoose = require("mongoose");
 const mongooseConnectionOptions_1 = require("../../../../mongooseConnectionOptions");
 const debug = createDebug('sskts-monitoring-jobs');
 function main() {
     return __awaiter(this, void 0, void 0, function* () {
         debug('connecting mongodb...');
-        sskts.mongoose.connect(process.env.MONGOLAB_URI, mongooseConnectionOptions_1.default);
-        const organizationRepo = new sskts.repository.Organization(sskts.mongoose.connection);
-        const taskRepo = new sskts.repository.Task(sskts.mongoose.connection);
-        const telemetryRepo = new sskts.repository.Telemetry(sskts.mongoose.connection);
-        const transactionRepo = new sskts.repository.Transaction(sskts.mongoose.connection);
-        const actionRepo = new sskts.repository.Action(sskts.mongoose.connection);
+        mongoose.connect(process.env.MONGOLAB_URI, mongooseConnectionOptions_1.default);
+        const sellerRepo = new sskts.repository.Seller(mongoose.connection);
+        const taskRepo = new sskts.repository.Task(mongoose.connection);
+        const telemetryRepo = new sskts.repository.Telemetry(mongoose.connection);
+        const transactionRepo = new sskts.repository.Transaction(mongoose.connection);
+        const actionRepo = new sskts.repository.Action(mongoose.connection);
         debug('creating telemetry...');
         const dateNow = moment();
         // tslint:disable-next-line:no-magic-numbers
         const measuredAt = moment.unix((dateNow.unix() - (dateNow.unix() % 60)));
         // 劇場組織ごとに販売者向け測定データを作成する
-        const movieTheaters = yield organizationRepo.searchMovieTheaters({});
+        const movieTheaters = yield sellerRepo.search({});
         yield Promise.all(movieTheaters.map((movieTheater) => __awaiter(this, void 0, void 0, function* () {
             yield sskts.service.report.telemetry.createStock({
                 measuredAt: measuredAt.toDate(),
@@ -52,7 +52,7 @@ function main() {
             action: actionRepo
         });
         debug('diconnecting mongo...');
-        yield sskts.mongoose.disconnect();
+        yield mongoose.disconnect();
     });
 }
 exports.main = main;

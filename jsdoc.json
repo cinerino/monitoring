@@ -24,7 +24,7 @@
         "dateFormat": "ddd MMM Do YYYY",
         "outputSourceFiles": true,
         "outputSourcePath": true,
-        "systemName": "SSKTSモニタリングジョブ",
+        "systemName": "Cinema Sunshine Monitoring Jobs",
         "footer": "",
         "navType": "vertical",
         "theme": "cosmo",

@@ -1,6 +1,5 @@
 /**
  * 測定データ報告
- * @ignore
  */
 import * as createDebug from 'debug';
 import * as Controller from '../../../../controller/reportFlowTelemetry';

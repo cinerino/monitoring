@@ -2,11 +2,11 @@
  * mongoose接続オプション
  * @see http://mongoosejs.com/docs/api.html#index_Mongoose-connect
  */
-import { mongoose } from '@motionpicture/sskts-domain';
+import * as mongoose from 'mongoose';
 
 const mongooseConnectionOptions: mongoose.ConnectionOptions = {
     autoReconnect: true,
-    keepAlive: 120000,
+    keepAlive: true,
     connectTimeoutMS: 30000,
     socketTimeoutMS: 0,
     reconnectTries: 30,

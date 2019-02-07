@@ -1,11 +1,10 @@
 /**
  * ストック測定データを報告する
- * @ignore
  */
-
 import * as sskts from '@motionpicture/sskts-domain';
 import * as createDebug from 'debug';
 import * as moment from 'moment';
+import * as mongoose from 'mongoose';
 
 import mongooseConnectionOptions from '../mongooseConnectionOptions';
 import * as GoogleChart from './googleChart';
@@ -28,7 +27,7 @@ type ISellerStockTelemetry = sskts.service.report.telemetry.ISellerStockTelemetr
 // tslint:disable-next-line:max-func-body-length
 export async function main() {
     debug('connecting mongodb...');
-    sskts.mongoose.connect(<string>process.env.MONGOLAB_URI, mongooseConnectionOptions);
+    mongoose.connect(<string>process.env.MONGOLAB_URI, mongooseConnectionOptions);
 
     // 集計単位数分の集計を行う
     const telemetryUnitTimeInSeconds = 60; // 集計単位時間(秒)
@@ -42,10 +41,10 @@ export async function main() {
     const measuredFrom = moment(dateNowByUnitTime).add(numberOfAggregationUnit * -telemetryUnitTimeInSeconds, 'seconds');
 
     debug('reporting telemetries measuredFrom - dateTo...', measuredFrom, dateNowByUnitTime);
-    const organizationRepo = new sskts.repository.Organization(sskts.mongoose.connection);
-    const telemetryRepo = new sskts.repository.Telemetry(sskts.mongoose.connection);
+    const sellerRepo = new sskts.repository.Seller(mongoose.connection);
+    const telemetryRepo = new sskts.repository.Telemetry(mongoose.connection);
 
-    const movieTheaters = await organizationRepo.searchMovieTheaters({});
+    const movieTheaters = await sellerRepo.search({});
 
     const globalTelemetries = await sskts.service.report.telemetry.searchGlobalStock({
         measuredFrom: measuredFrom.toDate(),
@@ -60,7 +59,7 @@ export async function main() {
     debug('sellerTelemetries length:', sellerTelemetries.length);
 
     debug('diconnecting mongo...');
-    await sskts.mongoose.disconnect();
+    await mongoose.disconnect();
 
     await reportNumberOfTasksUnexecuted(globalTelemetries);
 

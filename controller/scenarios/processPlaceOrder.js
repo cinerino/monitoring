@@ -12,13 +12,13 @@ Object.defineProperty(exports, "__esModule", { value: true });
 /**
  * 注文取引シナリオ
  */
-const sasaki = require("@motionpicture/sskts-api-nodejs-client");
+const ssktsapi = require("@motionpicture/sskts-api-nodejs-client");
 const sskts = require("@motionpicture/sskts-domain");
 const createDebug = require("debug");
 const moment = require("moment");
 const util = require("util");
 const debug = createDebug('sskts-monitoring-jobs');
-const auth = new sasaki.auth.ClientCredentials({
+const auth = new ssktsapi.auth.ClientCredentials({
     domain: process.env.SSKTS_API_AUTHORIZE_SERVER_DOMAIN,
     clientId: process.env.SSKTS_API_CLIENT_ID,
     clientSecret: process.env.SSKTS_API_CLIENT_SECRET,
@@ -29,15 +29,15 @@ const auth = new sasaki.auth.ClientCredentials({
     ],
     state: 'teststate'
 });
-const events = new sasaki.service.Event({
+const events = new ssktsapi.service.Event({
     endpoint: process.env.SSKTS_API_ENDPOINT,
     auth: auth
 });
-const organizations = new sasaki.service.Organization({
+const sellers = new ssktsapi.service.Seller({
     endpoint: process.env.SSKTS_API_ENDPOINT,
     auth: auth
 });
-const placeOrderTransactions = new sasaki.service.transaction.PlaceOrder({
+const placeOrderTransactions = new ssktsapi.service.transaction.PlaceOrder({
     endpoint: process.env.SSKTS_API_ENDPOINT,
     auth: auth
 });
@@ -48,10 +48,11 @@ function main(theaterCode, durationInMillisecond) {
         let progress = '';
         try {
             // search movie theater organizations
-            const movieTheaterOrganization = yield organizations.findMovieTheaterByBranchCode({
-                branchCode: theaterCode
+            const searchSellersResult = yield sellers.search({
+                location: { branchCodes: [theaterCode] }
             });
-            if (movieTheaterOrganization === null) {
+            const movieTheaterOrganization = searchSellersResult.data.shift();
+            if (movieTheaterOrganization === undefined) {
                 throw new Error('movie theater shop not open');
             }
             progress = `movie theater found. ${movieTheaterOrganization.id}`;
@@ -59,15 +60,17 @@ function main(theaterCode, durationInMillisecond) {
             // search screening events
             progress = 'searching events...';
             debug(progress);
-            const individualScreeningEvents = yield events.searchIndividualScreeningEvent({
-                superEventLocationIdentifiers: [movieTheaterOrganization.identifier],
+            const searchEventsResult = yield events.searchScreeningEvents({
+                typeOf: ssktsapi.factory.eventType.ScreeningEvent,
+                superEvent: { locationBranchCodes: [theaterCode] },
                 startFrom: moment().toDate(),
                 // tslint:disable-next-line:no-magic-numbers
                 startThrough: moment().add(2, 'days').toDate()
             });
-            progress = `${individualScreeningEvents.length} events found.`;
+            const screeningEvents = searchEventsResult.data;
+            progress = `${screeningEvents.length} events found.`;
             debug(progress);
-            const availableEvents = individualScreeningEvents.filter((event) => (event.offer.availability !== 0));
+            const availableEvents = screeningEvents.filter((event) => (event.offer.availability !== 0));
             if (availableEvents.length === 0) {
                 throw new Error('No available events');
             }
@@ -76,17 +79,16 @@ function main(theaterCode, durationInMillisecond) {
             yield wait(Math.floor(durationInMillisecond / 6));
             const availableEvent = availableEvents[Math.floor(availableEvents.length * Math.random())];
             // retrieve an event detail
-            const individualScreeningEvent = yield events.findIndividualScreeningEvent({
-                identifier: availableEvent.identifier
-            });
-            if (individualScreeningEvent === null) {
+            const screeningEvent = yield events.findScreeningEventById(availableEvent);
+            if (screeningEvent === null) {
                 throw new Error('Specified screening event not found');
             }
-            const dateJouei = individualScreeningEvent.coaInfo.dateJouei;
-            const titleCode = individualScreeningEvent.coaInfo.titleCode;
-            const titleBranchNum = individualScreeningEvent.coaInfo.titleBranchNum;
-            const timeBegin = individualScreeningEvent.coaInfo.timeBegin;
-            const screenCode = individualScreeningEvent.coaInfo.screenCode;
+            const coaInfo = screeningEvent.coaInfo;
+            const dateJouei = coaInfo.dateJouei;
+            const titleCode = coaInfo.titleCode;
+            const titleBranchNum = coaInfo.titleBranchNum;
+            const timeBegin = coaInfo.timeBegin;
+            const screenCode = coaInfo.screenCode;
             // start a transaction
             progress = 'starting a transaction...';
             debug(progress);
@@ -136,7 +138,7 @@ function main(theaterCode, durationInMillisecond) {
             debug(progress);
             let seatReservationAuthorization = yield placeOrderTransactions.createSeatReservationAuthorization({
                 transactionId: transaction.id,
-                eventIdentifier: individualScreeningEvent.identifier,
+                eventIdentifier: screeningEvent.identifier,
                 offers: [
                     {
                         seatSection: sectionCode,
@@ -171,7 +173,7 @@ function main(theaterCode, durationInMillisecond) {
             debug(progress);
             seatReservationAuthorization = yield placeOrderTransactions.createSeatReservationAuthorization({
                 transactionId: transaction.id,
-                eventIdentifier: individualScreeningEvent.identifier,
+                eventIdentifier: screeningEvent.identifier,
                 offers: [
                     {
                         seatSection: sectionCode,
@@ -203,7 +205,7 @@ function main(theaterCode, durationInMillisecond) {
             seatReservationAuthorization = yield placeOrderTransactions.changeSeatReservationOffers({
                 transactionId: transaction.id,
                 actionId: seatReservationAuthorization.id,
-                eventIdentifier: individualScreeningEvent.identifier,
+                eventIdentifier: screeningEvent.identifier,
                 offers: [
                     {
                         seatSection: sectionCode,

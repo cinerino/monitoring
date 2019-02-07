@@ -1,12 +1,11 @@
 /**
  * クレジットカードオーソリアクションデータを集計する
- * @ignore
  */
-
 import * as sskts from '@motionpicture/sskts-domain';
 import * as createDebug from 'debug';
 // import * as fs from 'fs';
 import * as moment from 'moment';
+import * as mongoose from 'mongoose';
 import * as request from 'request-promise-native';
 
 import mongooseConnectionOptions from '../../../../mongooseConnectionOptions';
@@ -22,7 +21,7 @@ const AGGREGATION_PERIOD_IN_DAYS = parseInt(process.env.CREDIT_CARD_AUTH_AGGREGA
 
 // tslint:disable-next-line:max-func-body-length
 export async function main() {
-    const actionRepo = new sskts.repository.Action(sskts.mongoose.connection);
+    const actionRepo = new sskts.repository.Action(mongoose.connection);
 
     // 一定期間のクレジットカード承認アクションを検索
     const aggregationStartThrough = new Date();
@@ -111,7 +110,7 @@ export async function main() {
 ### Configurations
 key  | value
 ------ | ------
-databaseName  | ${sskts.mongoose.connection.db.databaseName}
+databaseName  | ${mongoose.connection.db.databaseName}
 集計対象期間  | ${aggregationStartFrom.toISOString()} - ${aggregationStartThrough.toISOString()}
 
 ### Summary
@@ -166,7 +165,7 @@ ${userMessagesSummary.map((s) => `${s.key} | ${s.ratio}% | ${s.count}/${s.total}
     debug('posted to backlog.');
 }
 
-sskts.mongoose.connect(<string>process.env.MONGOLAB_URI, mongooseConnectionOptions)
+mongoose.connect(<string>process.env.MONGOLAB_URI, mongooseConnectionOptions)
     .then(async () => {
         try {
             await main();
@@ -175,6 +174,6 @@ sskts.mongoose.connect(<string>process.env.MONGOLAB_URI, mongooseConnectionOptio
             console.error(error);
         }
 
-        await sskts.mongoose.disconnect();
+        await mongoose.disconnect();
     })
     .catch(console.error);
