@@ -46,11 +46,10 @@ npm run build
 | `LINE_NOTIFY_URL`                             | true                  |                         | https://notify-api.line.me/api/notify  |
 | `AZURE_STORAGE_CONNECTION_STRING`             | true                  |                         | Save charts on azure storage           |
 | `CHART_EXPIRES_IN_MONTH`                      | true                  |                         | チャート表示有効期間(ヵ月)             |
-| `SSKTS_API_CLIENT_ID`                         | true                  |                         | SSKTS APIクライアントID                |
-| `SSKTS_API_CLIENT_SECRET`                     | true                  |                         | SSKTS APIクライアントシークレット      |
-| `SSKTS_API_AUTHORIZE_SERVER_DOMAIN`           | true                  |                         | SSKTS API認可サーバードメイン          |
-| `SSKTS_API_RESOURCE_SERVER_IDENTIFIER`        | true                  |                         | SSKTS APIリソースサーバー識別子        |
-| `SSKTS_API_ENDPOINT`                          | true                  |                         | SSKTS APIエンドポイント                |
+| `SSKTS_CLIENT_ID`                             | true                  |                         | SSKTS APIクライアントID                |
+| `SSKTS_CLIENT_SECRET`                         | true                  |                         | SSKTS APIクライアントシークレット      |
+| `SSKTS_AUTHORIZE_SERVER_DOMAIN`               | true                  |                         | SSKTS API認可サーバードメイン          |
+| `SSKTS_ENDPOINT`                              | true                  |                         | SSKTS APIエンドポイント                |
 | `BACKLOG_API_KEY`                             | true                  |                         | バックログAPI key                      |
 | `CONTINUOUS_SCENARIOS_STOPPED`                | true                  | 1 or 0                  | 継続的なシナリオを止めるかどうか       |
 | `CREDIT_CARD_AUTH_AGGREGATION_PERIOD_IN_DAYS` | true                  |                         | クレジットカード承認アクション集計期間 |
