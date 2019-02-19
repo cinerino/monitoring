@@ -272,7 +272,8 @@ function main(theaterCode, durationInMillisecond) {
             progress = 'confirming a transaction...';
             debug(progress);
             const order = yield placeOrderTransactions.confirm({
-                transactionId: transaction.id
+                transactionId: transaction.id,
+                sendEmailMessage: true
             });
             progress = `transaction confirmed. ${order.orderNumber}`;
             debug(progress);

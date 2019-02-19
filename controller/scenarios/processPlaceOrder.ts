@@ -302,7 +302,8 @@ export async function main(theaterCode: string, durationInMillisecond: number) {
         progress = 'confirming a transaction...';
         debug(progress);
         const order = await placeOrderTransactions.confirm({
-            transactionId: transaction.id
+            transactionId: transaction.id,
+            sendEmailMessage: true
         });
         progress = `transaction confirmed. ${order.orderNumber}`;
         debug(progress);
