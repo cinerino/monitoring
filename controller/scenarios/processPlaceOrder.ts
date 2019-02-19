@@ -11,29 +11,25 @@ import * as util from 'util';
 const debug = createDebug('sskts-monitoring-jobs');
 
 const auth = new ssktsapi.auth.ClientCredentials({
-    domain: <string>process.env.SSKTS_API_AUTHORIZE_SERVER_DOMAIN,
-    clientId: <string>process.env.SSKTS_API_CLIENT_ID,
-    clientSecret: <string>process.env.SSKTS_API_CLIENT_SECRET,
-    scopes: [
-        `${process.env.SSKTS_API_RESOURCE_SERVER_IDENTIFIER}/transactions`,
-        `${process.env.SSKTS_API_RESOURCE_SERVER_IDENTIFIER}/events.read-only`,
-        `${process.env.SSKTS_API_RESOURCE_SERVER_IDENTIFIER}/organizations.read-only`
-    ],
+    domain: <string>process.env.SSKTS_AUTHORIZE_SERVER_DOMAIN,
+    clientId: <string>process.env.SSKTS_CLIENT_ID,
+    clientSecret: <string>process.env.SSKTS_CLIENT_SECRET,
+    scopes: [],
     state: 'teststate'
 });
 
 const events = new ssktsapi.service.Event({
-    endpoint: <string>process.env.SSKTS_API_ENDPOINT,
+    endpoint: <string>process.env.SSKTS_ENDPOINT,
     auth: auth
 });
 
 const sellers = new ssktsapi.service.Seller({
-    endpoint: <string>process.env.SSKTS_API_ENDPOINT,
+    endpoint: <string>process.env.SSKTS_ENDPOINT,
     auth: auth
 });
 
 const placeOrderTransactions = new ssktsapi.service.transaction.PlaceOrder({
-    endpoint: <string>process.env.SSKTS_API_ENDPOINT,
+    endpoint: <string>process.env.SSKTS_ENDPOINT,
     auth: auth
 });
 
@@ -306,7 +302,8 @@ export async function main(theaterCode: string, durationInMillisecond: number) {
         progress = 'confirming a transaction...';
         debug(progress);
         const order = await placeOrderTransactions.confirm({
-            transactionId: transaction.id
+            transactionId: transaction.id,
+            sendEmailMessage: true
         });
         progress = `transaction confirmed. ${order.orderNumber}`;
         debug(progress);

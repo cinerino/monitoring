@@ -65,7 +65,7 @@ startScenarios({
     sellerBranchCodes: (process.argv[4] !== undefined) ? process.argv[4].split(',') : [
         '101', '112', '116', '118', '119', '116', '117', '114', '102', '106', '108', '107', '110', '109', '113', '115'
     ],
-    apiEndpoint: <string>process.env.SSKTS_API_ENDPOINT,
+    apiEndpoint: <string>process.env.SSKTS_ENDPOINT,
     // tslint:disable-next-line:no-magic-numbers
     minDurationInSeconds: (process.argv[5] !== undefined) ? parseInt(process.argv[5], 10) : 300,
     // tslint:disable-next-line:no-magic-numbers

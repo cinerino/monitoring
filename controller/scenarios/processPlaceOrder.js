@@ -19,26 +19,22 @@ const moment = require("moment");
 const util = require("util");
 const debug = createDebug('sskts-monitoring-jobs');
 const auth = new ssktsapi.auth.ClientCredentials({
-    domain: process.env.SSKTS_API_AUTHORIZE_SERVER_DOMAIN,
-    clientId: process.env.SSKTS_API_CLIENT_ID,
-    clientSecret: process.env.SSKTS_API_CLIENT_SECRET,
-    scopes: [
-        `${process.env.SSKTS_API_RESOURCE_SERVER_IDENTIFIER}/transactions`,
-        `${process.env.SSKTS_API_RESOURCE_SERVER_IDENTIFIER}/events.read-only`,
-        `${process.env.SSKTS_API_RESOURCE_SERVER_IDENTIFIER}/organizations.read-only`
-    ],
+    domain: process.env.SSKTS_AUTHORIZE_SERVER_DOMAIN,
+    clientId: process.env.SSKTS_CLIENT_ID,
+    clientSecret: process.env.SSKTS_CLIENT_SECRET,
+    scopes: [],
     state: 'teststate'
 });
 const events = new ssktsapi.service.Event({
-    endpoint: process.env.SSKTS_API_ENDPOINT,
+    endpoint: process.env.SSKTS_ENDPOINT,
     auth: auth
 });
 const sellers = new ssktsapi.service.Seller({
-    endpoint: process.env.SSKTS_API_ENDPOINT,
+    endpoint: process.env.SSKTS_ENDPOINT,
     auth: auth
 });
 const placeOrderTransactions = new ssktsapi.service.transaction.PlaceOrder({
-    endpoint: process.env.SSKTS_API_ENDPOINT,
+    endpoint: process.env.SSKTS_ENDPOINT,
     auth: auth
 });
 // tslint:disable-next-line:max-func-body-length
@@ -276,7 +272,8 @@ function main(theaterCode, durationInMillisecond) {
             progress = 'confirming a transaction...';
             debug(progress);
             const order = yield placeOrderTransactions.confirm({
-                transactionId: transaction.id
+                transactionId: transaction.id,
+                sendEmailMessage: true
             });
             progress = `transaction confirmed. ${order.orderNumber}`;
             debug(progress);
