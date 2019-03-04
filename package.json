@@ -49,7 +49,7 @@
     "build": "tsc && cpx \"src/**/*.job\" dst -v",
     "build:watch": "concurrently \"tsc -w\" \"cpx \"src/**/*.job\" dst -v -w\"",
     "check": "npm run tslint",
-    "clean": "rimraf ./dst ./doc ./coverage \"npm-debug.log*\" ./.nyc_output test/**/*.js",
+    "clean": "rimraf ./dst ./doc ./coverage \"npm-debug.log*\" ./.nyc_output",
     "doc": "echo \"No docs.\" && exit 0",
     "snyk": "snyk wizard",
     "test": "npm run check && mocha",
@@ -58,5 +58,5 @@
     "version": "git add -A",
     "postversion": "git push origin --tags"
   },
-  "version": "5.0.2"
+  "version": "5.1.0"
 }
