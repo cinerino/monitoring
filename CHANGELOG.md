@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ### Added
 
+- 承認アクション分析タスクを追加
+
 ### Changed
 
 - install @motionpicture/sskts-domain@30.0.0
