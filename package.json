@@ -50,7 +50,7 @@
     "build:watch": "concurrently \"tsc -w\" \"cpx \"src/**/*.job\" dst -v -w\"",
     "check": "npm run tslint",
     "clean": "rimraf ./dst ./doc ./coverage \"npm-debug.log*\" ./.nyc_output test/**/*.js",
-    "doc": "jsdoc -c jsdoc.json",
+    "doc": "echo \"No docs.\" && exit 0",
     "snyk": "snyk wizard",
     "test": "npm run check && mocha",
     "tslint": "tslint --project tsconfig.json -c tslint.json --exclude \"**/*.spec.ts\" \"src/**/*.ts\"",
