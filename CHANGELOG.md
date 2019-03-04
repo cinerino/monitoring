@@ -18,6 +18,16 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ### Security
 
+## v5.1.0 - 2019-03-04
+
+### Added
+
+- 承認アクション分析タスクを追加
+
+### Changed
+
+- install @motionpicture/sskts-domain@30.0.0
+
 ## v5.0.2 - 2019-02-19
 
 ### Changed

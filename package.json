@@ -10,7 +10,7 @@
   ],
   "dependencies": {
     "@motionpicture/sskts-api-nodejs-client": "6.0.0-alpha.2",
-    "@motionpicture/sskts-domain": "^29.1.1",
+    "@motionpicture/sskts-domain": "^30.0.0",
     "debug": "^3.2.6",
     "json2csv": "^3.11.5",
     "moment": "^2.24.0",
@@ -22,16 +22,19 @@
   "devDependencies": {
     "@types/debug": "0.0.29",
     "@types/mocha": "^5.2.6",
-    "@types/mongoose": "^5.3.17",
+    "@types/mongoose": "^5.3.20",
+    "@types/node": "^10.12.29",
     "@types/request": "^2.48.1",
     "@types/request-promise-native": "^1.0.15",
+    "concurrently": "^4.1.0",
+    "cpx": "^1.5.0",
     "ink-docstrap": "^1.3.2",
     "jsdoc": "^3.5.5",
-    "mocha": "^6.0.0",
+    "mocha": "^6.0.2",
     "rimraf": "^2.6.3",
-    "tslint": "^5.12.1",
+    "tslint": "^5.13.1",
     "tslint-microsoft-contrib": "^6.0.0",
-    "typescript": "^3.3.3"
+    "typescript": "^3.3.3333"
   },
   "engines": {
     "node": ">=8.0.0",
@@ -43,16 +46,17 @@
   "private": true,
   "repository": {},
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && cpx \"src/**/*.job\" dst -v",
+    "build:watch": "concurrently \"tsc -w\" \"cpx \"src/**/*.job\" dst -v -w\"",
     "check": "npm run tslint",
-    "clean": "rimraf App_Data/**/*.js controller/**/*.js test/**/*.js doc/**/* npm-debug.log*",
-    "doc": "jsdoc -c jsdoc.json",
+    "clean": "rimraf ./dst ./doc ./coverage \"npm-debug.log*\" ./.nyc_output",
+    "doc": "echo \"No docs.\" && exit 0",
     "snyk": "snyk wizard",
     "test": "npm run check && mocha",
-    "tslint": "tslint --project tsconfig.json -c tslint.json \"bin/**/*.ts test/**/*.ts\"",
+    "tslint": "tslint --project tsconfig.json -c tslint.json --exclude \"**/*.spec.ts\" \"src/**/*.ts\"",
     "preversion": "npm run clean && npm run build && npm test",
     "version": "git add -A",
     "postversion": "git push origin --tags"
   },
-  "version": "5.0.2"
+  "version": "5.1.0"
 }
