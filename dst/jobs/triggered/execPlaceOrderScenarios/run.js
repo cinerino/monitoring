@@ -11,14 +11,14 @@ Object.defineProperty(exports, "__esModule", { value: true });
 /**
  * 注文シナリオリクエストを実行する
  */
-const sskts = require("@motionpicture/sskts-domain");
+const cinerino = require("@cinerino/domain");
 const createDebug = require("debug");
 const json2csv = require("json2csv");
 const moment = require("moment");
 const request = require("request-promise-native");
 const timers_1 = require("timers");
 const processPlaceOrder = require("../../../controller/scenarios/processPlaceOrder");
-const debug = createDebug('sskts-monitoring-jobs');
+const debug = createDebug('cinerino-monitoring');
 startScenarios({
     // tslint:disable-next-line:no-magic-numbers
     numberOfTrials: (process.argv[2] !== undefined) ? parseInt(process.argv[2], 10) : 10,
@@ -147,8 +147,8 @@ function reportResults(configurations, scenarioResults) {
             preserveNewLinesInValues: true
         });
         // upload csv
-        const url = yield sskts.service.util.uploadFile({
-            fileName: `sskts-report-loadtest-placeOrderTransactions-${moment()
+        const url = yield cinerino.service.util.uploadFile({
+            fileName: `cinerino-report-loadtest-placeOrderTransactions-${moment()
                 .format('YYYYMMDDhhmmss')}.csv`,
             text: csv,
             expiryDate: moment()
@@ -186,7 +186,7 @@ unknown | ${Math.floor(HUNDRED * numbersOfResult.unknown / results.length)}% | $
 ### Reports
 - Please check out the csv report [here](${url}).
         `;
-        // const emailMessage = sskts.factory.creativeWork.message.email.create({
+        // const emailMessage = cinerino.factory.creativeWork.message.email.create({
         //     identifier: 'identifier',
         //     sender: {
         //         name: 'SSKTS Report',
@@ -199,7 +199,7 @@ unknown | ${Math.floor(HUNDRED * numbersOfResult.unknown / results.length)}% | $
         //     about: subject,
         //     text: text
         // });
-        // await sskts.service.notification.sendEmail(emailMessage)();
+        // await cinerino.service.notification.sendEmail(emailMessage)();
         // backlogへ通知
         const users = yield request.get({
             url: `https://m-p.backlog.jp/api/v2/projects/SSKTS/users?apiKey=${process.env.BACKLOG_API_KEY}`,

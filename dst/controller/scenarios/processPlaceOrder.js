@@ -12,12 +12,12 @@ Object.defineProperty(exports, "__esModule", { value: true });
 /**
  * 注文取引シナリオ
  */
+const cinerino = require("@cinerino/domain");
 const ssktsapi = require("@motionpicture/sskts-api-nodejs-client");
-const sskts = require("@motionpicture/sskts-domain");
 const createDebug = require("debug");
 const moment = require("moment");
 const util = require("util");
-const debug = createDebug('sskts-monitoring-jobs');
+const debug = createDebug('cinerino-monitoring');
 const auth = new ssktsapi.auth.ClientCredentials({
     domain: process.env.SSKTS_AUTHORIZE_SERVER_DOMAIN,
     clientId: process.env.SSKTS_CLIENT_ID,
@@ -57,7 +57,7 @@ function main(theaterCode, durationInMillisecond) {
             progress = 'searching events...';
             debug(progress);
             const searchEventsResult = yield events.searchScreeningEvents({
-                typeOf: ssktsapi.factory.eventType.ScreeningEvent,
+                typeOf: ssktsapi.factory.chevre.eventType.ScreeningEvent,
                 superEvent: { locationBranchCodes: [theaterCode] },
                 startFrom: moment()
                     .toDate(),
@@ -100,21 +100,21 @@ function main(theaterCode, durationInMillisecond) {
             });
             progress = `transaction started. ${transaction.id}`;
             debug(progress);
-            // search sales tickets from sskts.COA
+            // search sales tickets from cinerino.COA
             // このサンプルは1座席購入なので、制限単位が1枚以上の券種に絞る
-            const salesTicketResult = yield sskts.COA.services.reserve.salesTicket({
+            const salesTicketResult = yield cinerino.COA.services.reserve.salesTicket({
                 theaterCode: theaterCode,
                 dateJouei: dateJouei,
                 titleCode: titleCode,
                 titleBranchNum: titleBranchNum,
                 timeBegin: timeBegin,
-                flgMember: sskts.COA.services.reserve.FlgMember.NonMember
+                flgMember: cinerino.COA.services.reserve.FlgMember.NonMember
             })
                 .then((results) => results.filter((result) => result.limitUnit === '001' && result.limitCount === 1));
             progress = `${salesTicketResult.length} sales ticket found.`;
             debug(progress);
-            // search available seats from sskts.COA
-            const getStateReserveSeatResult = yield sskts.COA.services.reserve.stateReserveSeat({
+            // search available seats from cinerino.COA
+            const getStateReserveSeatResult = yield cinerino.COA.services.reserve.stateReserveSeat({
                 theaterCode: theaterCode,
                 dateJouei: dateJouei,
                 titleCode: titleCode,
@@ -236,7 +236,7 @@ function main(theaterCode, durationInMillisecond) {
             const orderIdPrefix = util.format('%s%s%s', moment()
                 .format('YYYYMMDD'), theaterCode, 
             // tslint:disable-next-line:no-magic-numbers
-            `00000000${seatReservationAuthorization.result.updTmpReserveSeatResult.tmpReserveNum}`.slice(-8));
+            `00000000${seatReservationAuthorization.result.responseBody.tmpReserveNum}`.slice(-8));
             progress = `authorizing credit card... ${orderIdPrefix}`;
             debug(progress);
             // tslint:disable-next-line:max-line-length
@@ -265,7 +265,7 @@ function main(theaterCode, durationInMillisecond) {
                 givenName: 'たろう',
                 familyName: 'もーしょん',
                 telephone: '09012345678',
-                email: process.env.SSKTS_DEVELOPER_EMAIL
+                email: process.env.DEVELOPER_EMAIL
             };
             yield placeOrderTransactions.setCustomerContact({
                 transactionId: transaction.id,
@@ -312,7 +312,7 @@ function authorieCreditCardUntilSuccess(transactionId, orderIdPrefix, amount) {
                     // tslint:disable-next-line:no-magic-numbers
                     orderId: `${orderIdPrefix}${`00${numberOfTryAuthorizeCreditCard.toString()}`.slice(-2)}`,
                     amount: amount,
-                    method: sskts.GMO.utils.util.Method.Lump,
+                    method: cinerino.GMO.utils.util.Method.Lump,
                     creditCard: {
                         cardNo: '4111111111111111',
                         expire: '2012',

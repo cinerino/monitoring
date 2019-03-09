@@ -2,13 +2,14 @@
 /**
  * 注文取引シナリオ
  */
+import * as cinerino from '@cinerino/domain';
+
 import * as ssktsapi from '@motionpicture/sskts-api-nodejs-client';
-import * as sskts from '@motionpicture/sskts-domain';
 import * as createDebug from 'debug';
 import * as moment from 'moment';
 import * as util from 'util';
 
-const debug = createDebug('sskts-monitoring-jobs');
+const debug = createDebug('cinerino-monitoring');
 
 const auth = new ssktsapi.auth.ClientCredentials({
     domain: <string>process.env.SSKTS_AUTHORIZE_SERVER_DOMAIN,
@@ -54,7 +55,7 @@ export async function main(theaterCode: string, durationInMillisecond: number) {
         progress = 'searching events...';
         debug(progress);
         const searchEventsResult = await events.searchScreeningEvents({
-            typeOf: ssktsapi.factory.eventType.ScreeningEvent,
+            typeOf: ssktsapi.factory.chevre.eventType.ScreeningEvent,
             superEvent: { locationBranchCodes: [theaterCode] },
             startFrom: moment()
                 .toDate(),
@@ -107,22 +108,22 @@ export async function main(theaterCode: string, durationInMillisecond: number) {
         progress = `transaction started. ${transaction.id}`;
         debug(progress);
 
-        // search sales tickets from sskts.COA
+        // search sales tickets from cinerino.COA
         // このサンプルは1座席購入なので、制限単位が1枚以上の券種に絞る
-        const salesTicketResult = await sskts.COA.services.reserve.salesTicket({
+        const salesTicketResult = await cinerino.COA.services.reserve.salesTicket({
             theaterCode: theaterCode,
             dateJouei: dateJouei,
             titleCode: titleCode,
             titleBranchNum: titleBranchNum,
             timeBegin: timeBegin,
-            flgMember: sskts.COA.services.reserve.FlgMember.NonMember
+            flgMember: cinerino.COA.services.reserve.FlgMember.NonMember
         })
             .then((results) => results.filter((result) => result.limitUnit === '001' && result.limitCount === 1));
         progress = `${salesTicketResult.length} sales ticket found.`;
         debug(progress);
 
-        // search available seats from sskts.COA
-        const getStateReserveSeatResult = await sskts.COA.services.reserve.stateReserveSeat({
+        // search available seats from cinerino.COA
+        const getStateReserveSeatResult = await cinerino.COA.services.reserve.stateReserveSeat({
             theaterCode: theaterCode,
             dateJouei: dateJouei,
             titleCode: titleCode,
@@ -257,7 +258,7 @@ export async function main(theaterCode: string, durationInMillisecond: number) {
                 .format('YYYYMMDD'),
             theaterCode,
             // tslint:disable-next-line:no-magic-numbers
-            `00000000${seatReservationAuthorization.result.updTmpReserveSeatResult.tmpReserveNum}`.slice(-8)
+            `00000000${seatReservationAuthorization.result.responseBody.tmpReserveNum}`.slice(-8)
         );
         progress = `authorizing credit card... ${orderIdPrefix}`;
         debug(progress);
@@ -293,7 +294,7 @@ export async function main(theaterCode: string, durationInMillisecond: number) {
             givenName: 'たろう',
             familyName: 'もーしょん',
             telephone: '09012345678',
-            email: <string>process.env.SSKTS_DEVELOPER_EMAIL
+            email: <string>process.env.DEVELOPER_EMAIL
         };
         await placeOrderTransactions.setCustomerContact({
             transactionId: transaction.id,
@@ -343,7 +344,7 @@ async function authorieCreditCardUntilSuccess(transactionId: string, orderIdPref
                 // tslint:disable-next-line:no-magic-numbers
                 orderId: `${orderIdPrefix}${`00${numberOfTryAuthorizeCreditCard.toString()}`.slice(-2)}`,
                 amount: amount,
-                method: sskts.GMO.utils.util.Method.Lump,
+                method: cinerino.GMO.utils.util.Method.Lump,
                 creditCard: {
                     cardNo: '4111111111111111',
                     expire: '2012',

@@ -3,12 +3,12 @@
  * @namespace controller.googleChart
  */
 
-import * as sskts from '@motionpicture/sskts-domain';
+import * as cinerino from '@cinerino/domain';
 import * as createDebug from 'debug';
 import * as moment from 'moment';
 import * as request from 'request-promise-native';
 
-const debug = createDebug('sskts-monitoring-jobs');
+const debug = createDebug('cinerino-monitoring');
 const GOOGLE_CHART_URL = 'https://chart.googleapis.com/chart';
 
 export async function publishUrl(params: any) {
@@ -22,7 +22,7 @@ export async function publishUrl(params: any) {
     debug('creating block blob... buffer.length:', buffer.length);
 
     // 3ヵ月有効なブロブ
-    return sskts.service.util.uploadFile({
+    return cinerino.service.util.uploadFile({
         fileName: `monitoring-jobs-google-chart-${moment()
             // tslint:disable-next-line:insecure-random no-magic-numbers
             .format('YYMMDDHHmmssSSS')}-${Math.floor(Math.random() * 1000)}.png`,

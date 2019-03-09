@@ -1,7 +1,7 @@
 /**
  * ストック測定データを報告する
  */
-import * as sskts from '@motionpicture/sskts-domain';
+import * as cinerino from '@cinerino/domain';
 import * as createDebug from 'debug';
 import * as moment from 'moment';
 import * as mongoose from 'mongoose';
@@ -9,7 +9,7 @@ import * as mongoose from 'mongoose';
 import mongooseConnectionOptions from '../mongooseConnectionOptions';
 import * as GoogleChart from './googleChart';
 
-const debug = createDebug('sskts-monitoring-jobs');
+const debug = createDebug('cinerino-monitoring');
 const defaultParams = {
     chco: 'DAA8F5',
     chf: 'bg,s,283037',
@@ -21,8 +21,8 @@ const defaultParams = {
     chxs: '0,a1a6a9,12|1,a1a6a9,12|2,a1a6a9,12'
 };
 
-type IGlobalStockTelemetry = sskts.service.report.telemetry.IGlobalStockTelemetry;
-type ISellerStockTelemetry = sskts.service.report.telemetry.ISellerStockTelemetry;
+type IGlobalStockTelemetry = cinerino.service.report.telemetry.IGlobalStockTelemetry;
+type ISellerStockTelemetry = cinerino.service.report.telemetry.ISellerStockTelemetry;
 
 // tslint:disable-next-line:max-func-body-length
 export async function main() {
@@ -41,18 +41,18 @@ export async function main() {
         .add(numberOfAggregationUnit * -telemetryUnitTimeInSeconds, 'seconds');
 
     debug('reporting telemetries measuredFrom - dateTo...', measuredFrom, dateNowByUnitTime);
-    const sellerRepo = new sskts.repository.Seller(mongoose.connection);
-    const telemetryRepo = new sskts.repository.Telemetry(mongoose.connection);
+    const sellerRepo = new cinerino.repository.Seller(mongoose.connection);
+    const telemetryRepo = new cinerino.repository.Telemetry(mongoose.connection);
 
     const movieTheaters = await sellerRepo.search({});
 
-    const globalTelemetries = await sskts.service.report.telemetry.searchGlobalStock({
+    const globalTelemetries = await cinerino.service.report.telemetry.searchGlobalStock({
         measuredFrom: measuredFrom.toDate(),
         measuredThrough: dateNowByUnitTime.toDate()
     })({ telemetry: telemetryRepo });
     debug('globalTelemetries length:', globalTelemetries.length);
 
-    const sellerTelemetries = await sskts.service.report.telemetry.searchSellerStock({
+    const sellerTelemetries = await cinerino.service.report.telemetry.searchSellerStock({
         measuredFrom: measuredFrom.toDate(),
         measuredThrough: dateNowByUnitTime.toDate()
     })({ telemetry: telemetryRepo });
@@ -89,7 +89,7 @@ async function reportNumberOfTransactionsUnderway(sellerName: string, telemetrie
         .join(',');
     const imageFullsize = await GoogleChart.publishUrl(params);
 
-    await sskts.service.notification.report2developers(
+    await cinerino.service.notification.report2developers(
         `${sellerName}\n時点での進行中取引数`,
         '',
         imageFullsize,
@@ -117,7 +117,7 @@ async function reportNumberOfTasksUnexecuted(telemetries: IGlobalStockTelemetry[
         .join(',');
     const imageFullsize = await GoogleChart.publishUrl(params);
 
-    await sskts.service.notification.report2developers(
+    await cinerino.service.notification.report2developers(
         '時点でのタスク数',
         '',
         imageFullsize,

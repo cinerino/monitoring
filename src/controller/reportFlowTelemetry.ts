@@ -1,7 +1,7 @@
 /**
  * フロー測定データを報告する
  */
-import * as sskts from '@motionpicture/sskts-domain';
+import * as cinerino from '@cinerino/domain';
 import * as createDebug from 'debug';
 import * as moment from 'moment';
 import * as mongoose from 'mongoose';
@@ -9,7 +9,7 @@ import * as mongoose from 'mongoose';
 import mongooseConnectionOptions from '../mongooseConnectionOptions';
 import * as GoogleChart from './googleChart';
 
-const debug = createDebug('sskts-monitoring-jobs');
+const debug = createDebug('cinerino-monitoring');
 const KILOSECONDS = 1000;
 const defaultParams = {
     chco: 'DAA8F5',
@@ -22,8 +22,8 @@ const defaultParams = {
     chxs: '0,a1a6a9,12|1,a1a6a9,12|2,a1a6a9,12'
 };
 
-type IGlobalFlowTelemetry = sskts.service.report.telemetry.IGlobalFlowTelemetry;
-type ISellerFlowTelemetry = sskts.service.report.telemetry.ISellerFlowTelemetry;
+type IGlobalFlowTelemetry = cinerino.service.report.telemetry.IGlobalFlowTelemetry;
+type ISellerFlowTelemetry = cinerino.service.report.telemetry.ISellerFlowTelemetry;
 
 // tslint:disable-next-line:max-func-body-length
 export async function main() {
@@ -43,18 +43,18 @@ export async function main() {
         .add(numberOfAggregationUnit * -telemetryUnitTimeInSeconds, 'seconds');
 
     debug('reporting telemetries...', measuredFrom, '-', dateNowByUnitTime);
-    const sellerRepo = new sskts.repository.Seller(mongoose.connection);
-    const telemetryRepo = new sskts.repository.Telemetry(mongoose.connection);
+    const sellerRepo = new cinerino.repository.Seller(mongoose.connection);
+    const telemetryRepo = new cinerino.repository.Telemetry(mongoose.connection);
 
     const movieTheaters = await sellerRepo.search({});
 
-    const globalTelemetries = await sskts.service.report.telemetry.searchGlobalFlow({
+    const globalTelemetries = await cinerino.service.report.telemetry.searchGlobalFlow({
         measuredFrom: measuredFrom.toDate(),
         measuredThrough: dateNowByUnitTime.toDate()
     })({ telemetry: telemetryRepo });
     debug('globalTelemetries length:', globalTelemetries.length);
 
-    const sellerTelemetries = await sskts.service.report.telemetry.searchSellerFlow({
+    const sellerTelemetries = await cinerino.service.report.telemetry.searchSellerFlow({
         measuredFrom: measuredFrom.toDate(),
         measuredThrough: dateNowByUnitTime.toDate()
     })({ telemetry: telemetryRepo });
@@ -91,8 +91,8 @@ export async function main() {
  * タスク実行試行回数を報告する
  */
 async function reportNumberOfTrialsOfTasks(telemetries: IGlobalFlowTelemetry[], measuredFrom: Date, measuredThrough: Date) {
-    const targetTaskNames = Object.keys(sskts.factory.taskName)
-        .map((k) => (<any>sskts.factory.taskName)[k]);
+    const targetTaskNames = Object.keys(cinerino.factory.taskName)
+        .map((k) => (<any>cinerino.factory.taskName)[k]);
 
     await Promise.all(targetTaskNames.map(async (taskName) => {
         const xLabels = createXLabels(measuredFrom, measuredThrough);
@@ -147,7 +147,7 @@ async function reportNumberOfTrialsOfTasks(telemetries: IGlobalFlowTelemetry[], 
         const imageFullsize = await GoogleChart.publishUrl(params);
         debug('url published.', imageFullsize);
 
-        await sskts.service.notification.report2developers(
+        await cinerino.service.notification.report2developers(
             `タスク実行試行回数\n${taskName}`,
             '',
             imageFullsize,
@@ -160,8 +160,8 @@ async function reportNumberOfTrialsOfTasks(telemetries: IGlobalFlowTelemetry[], 
  * タスク待ち時間を報告する
  */
 async function reportLatenciesOfTasks(telemetries: IGlobalFlowTelemetry[], measuredFrom: Date, measuredThrough: Date) {
-    const targetTaskNames = Object.keys(sskts.factory.taskName)
-        .map((k) => (<any>sskts.factory.taskName)[k]);
+    const targetTaskNames = Object.keys(cinerino.factory.taskName)
+        .map((k) => (<any>cinerino.factory.taskName)[k]);
 
     await Promise.all(targetTaskNames.map(async (taskName) => {
         const xLabels = createXLabels(measuredFrom, measuredThrough);
@@ -215,7 +215,7 @@ async function reportLatenciesOfTasks(telemetries: IGlobalFlowTelemetry[], measu
         const imageFullsize = await GoogleChart.publishUrl(params);
         debug('url published.', imageFullsize);
 
-        await sskts.service.notification.report2developers(
+        await cinerino.service.notification.report2developers(
             `タスク待機時間\n${taskName}`,
             '',
             imageFullsize,
@@ -250,7 +250,7 @@ async function reportNumberOfTransactionsByStatuses(
     const imageFullsize = await GoogleChart.publishUrl(params);
     debug('url published.', imageFullsize);
 
-    await sskts.service.notification.report2developers(
+    await cinerino.service.notification.report2developers(
         `${sellerName}\n分あたりの開始取引数\n分あたりの成立取引数\n分あたりの離脱取引数`,
         '',
         imageFullsize,
@@ -304,7 +304,7 @@ async function reportExpiredRatio(sellerName: string, telemetries: ISellerFlowTe
     const imageFullsize = await GoogleChart.publishUrl(params);
     debug('url published.', imageFullsize);
 
-    await sskts.service.notification.report2developers(
+    await cinerino.service.notification.report2developers(
         `${sellerName}\n${AGGREGATION_UNIT_IN_MINUTES}分ごとの取引離脱率`,
         '',
         imageFullsize,
@@ -348,7 +348,7 @@ async function reportTimeLeftUntilEvent(
     const imageFullsize = await GoogleChart.publishUrl(params);
     debug('url published.', imageFullsize);
 
-    await sskts.service.notification.report2developers(
+    await cinerino.service.notification.report2developers(
         `${sellerName}\n何時間前に予約したか`,
         '',
         imageFullsize,
@@ -380,7 +380,7 @@ async function reportTransactionRequiredTimes(
     const imageFullsize = await GoogleChart.publishUrl(params);
     debug('url published.', imageFullsize);
 
-    await sskts.service.notification.report2developers(
+    await cinerino.service.notification.report2developers(
         `${sellerName}\n分ごとの平均取引所要時間`,
         '',
         imageFullsize,
@@ -412,7 +412,7 @@ async function reportTransactionAmounts(
     const imageFullsize = await GoogleChart.publishUrl(params);
     debug('url published.', imageFullsize);
 
-    await sskts.service.notification.report2developers(
+    await cinerino.service.notification.report2developers(
         `${sellerName}\n分ごとの平均取引金額`,
         '',
         imageFullsize,
@@ -444,7 +444,7 @@ async function reportTransactionActions(
     const imageFullsize = await GoogleChart.publishUrl(params);
     debug('url published.', imageFullsize);
 
-    await sskts.service.notification.report2developers(
+    await cinerino.service.notification.report2developers(
         `${sellerName}\n分ごとの平均取引承認アクション数`,
         '',
         imageFullsize,

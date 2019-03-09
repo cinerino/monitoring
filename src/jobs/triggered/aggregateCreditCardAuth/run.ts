@@ -1,7 +1,7 @@
 /**
  * クレジットカードオーソリアクションデータを集計する
  */
-import * as sskts from '@motionpicture/sskts-domain';
+import * as cinerino from '@cinerino/domain';
 import * as createDebug from 'debug';
 // import * as fs from 'fs';
 import * as moment from 'moment';
@@ -10,7 +10,7 @@ import * as request from 'request-promise-native';
 
 import mongooseConnectionOptions from '../../../mongooseConnectionOptions';
 
-const debug = createDebug('sskts-monitoring-jobs');
+const debug = createDebug('cinerino-monitoring');
 
 const SUBJECT = 'クレジットカード承認アクション集計';
 const HUNDRED = 100;
@@ -21,7 +21,7 @@ const AGGREGATION_PERIOD_IN_DAYS = parseInt(process.env.CREDIT_CARD_AUTH_AGGREGA
 
 // tslint:disable-next-line:max-func-body-length
 export async function main() {
-    const actionRepo = new sskts.repository.Action(mongoose.connection);
+    const actionRepo = new cinerino.repository.Action(mongoose.connection);
 
     // 一定期間のクレジットカード承認アクションを検索
     const aggregationStartThrough = new Date();
@@ -34,14 +34,14 @@ export async function main() {
             $gte: aggregationStartFrom,
             $lt: aggregationStartThrough
         },
-        typeOf: sskts.factory.actionType.AuthorizeAction,
-        'object.typeOf': sskts.factory.paymentMethodType.CreditCard
+        typeOf: cinerino.factory.actionType.AuthorizeAction,
+        'object.typeOf': cinerino.factory.paymentMethodType.CreditCard
     })
-        .then((docs) => docs.map((doc) => <sskts.factory.action.authorize.paymentMethod.creditCard.IAction>doc.toObject()));
+        .then((docs) => docs.map((doc) => <cinerino.factory.action.authorize.paymentMethod.creditCard.IAction>doc.toObject()));
     debug(actions.length, 'action(s) found.');
 
     // 失敗ステータスのアクションを検出
-    const failedActions = actions.filter((a) => a.actionStatus === sskts.factory.actionStatusType.FailedActionStatus);
+    const failedActions = actions.filter((a) => a.actionStatus === cinerino.factory.actionStatusType.FailedActionStatus);
     debug('GMOServiceBadRequestError:', failedActions.filter((a) => a.error.name === 'GMOServiceBadRequestError').length);
 
     // 失敗アクションについてエラー項目ごとにデータ整形
@@ -58,9 +58,9 @@ export async function main() {
 
     // ステータスごとのアクション数を集計
     const numbersOfResult = {
-        completed: actions.filter((a) => a.actionStatus === sskts.factory.actionStatusType.CompletedActionStatus).length,
-        failed: actions.filter((a) => a.actionStatus === sskts.factory.actionStatusType.FailedActionStatus).length,
-        canceled: actions.filter((a) => a.actionStatus === sskts.factory.actionStatusType.CanceledActionStatus).length
+        completed: actions.filter((a) => a.actionStatus === cinerino.factory.actionStatusType.CompletedActionStatus).length,
+        failed: actions.filter((a) => a.actionStatus === cinerino.factory.actionStatusType.FailedActionStatus).length,
+        canceled: actions.filter((a) => a.actionStatus === cinerino.factory.actionStatusType.CanceledActionStatus).length
     };
 
     // エラー名を集計

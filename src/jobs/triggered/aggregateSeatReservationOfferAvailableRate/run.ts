@@ -2,7 +2,7 @@
  * 座席予約の空席時間率を算出する
  * 実験的実装
  */
-import * as sskts from '@motionpicture/sskts-domain';
+import * as cinerino from '@cinerino/domain';
 import * as createDebug from 'debug';
 import * as fs from 'fs';
 import * as moment from 'moment';
@@ -10,16 +10,16 @@ import * as mongoose from 'mongoose';
 
 import mongooseConnectionOptions from '../../../mongooseConnectionOptions';
 
-const debug = createDebug('sskts-monitoring-jobs');
+const debug = createDebug('cinerino-monitoring');
 
 const TIME_UNIT: moment.unitOfTime.Diff = 'seconds';
 
 // tslint:disable-next-line:max-func-body-length
 export async function aggregateOfferAvailableHoursRateByScreen(theaterCode: string, screenBranchCode: string) {
     // ここ1ヵ月の座席に対する上映イベントリストを取得
-    const placeRepo = new sskts.repository.Place(mongoose.connection);
-    const eventRepo = new sskts.repository.Event(mongoose.connection);
-    const orderRepo = new sskts.repository.Order(mongoose.connection);
+    const placeRepo = new cinerino.repository.Place(mongoose.connection);
+    const eventRepo = new cinerino.repository.Event(mongoose.connection);
+    const orderRepo = new cinerino.repository.Order(mongoose.connection);
 
     const movieTheater = await placeRepo.findMovieTheaterByBranchCode(theaterCode);
     const screeningRoom = movieTheater.containsPlace.find((p) => p.branchCode === screenBranchCode);
@@ -38,7 +38,7 @@ export async function aggregateOfferAvailableHoursRateByScreen(theaterCode: stri
 
     let events = await eventRepo.eventModel.find(
         {
-            typeOf: sskts.factory.eventType.IndividualScreeningEvent,
+            typeOf: cinerino.factory.chevre.eventType.ScreeningEvent,
             startDate: {
                 $gte: moment()
                     // tslint:disable-next-line:no-magic-numbers

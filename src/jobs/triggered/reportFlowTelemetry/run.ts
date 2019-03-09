@@ -4,7 +4,7 @@
 import * as createDebug from 'debug';
 import * as Controller from '../../../controller/reportFlowTelemetry';
 
-const debug = createDebug('sskts-monitoring-jobs');
+const debug = createDebug('cinerino-monitoring');
 
 Controller.main()
     .then(() => {

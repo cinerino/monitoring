@@ -1,7 +1,7 @@
 /**
  * 注文シナリオリクエストを実行する
  */
-import * as sskts from '@motionpicture/sskts-domain';
+import * as cinerino from '@cinerino/domain';
 import * as createDebug from 'debug';
 import * as json2csv from 'json2csv';
 import * as moment from 'moment';
@@ -10,7 +10,7 @@ import { setInterval } from 'timers';
 
 import * as processPlaceOrder from '../../../controller/scenarios/processPlaceOrder';
 
-const debug = createDebug('sskts-monitoring-jobs');
+const debug = createDebug('cinerino-monitoring');
 
 interface IConfigurations {
     /**
@@ -199,8 +199,8 @@ async function reportResults(configurations: IConfigurations, scenarioResults: I
     });
 
     // upload csv
-    const url = await sskts.service.util.uploadFile({
-        fileName: `sskts-report-loadtest-placeOrderTransactions-${moment()
+    const url = await cinerino.service.util.uploadFile({
+        fileName: `cinerino-report-loadtest-placeOrderTransactions-${moment()
             .format('YYYYMMDDhhmmss')}.csv`,
         text: csv,
         expiryDate: moment()
@@ -242,7 +242,7 @@ unknown | ${Math.floor(HUNDRED * numbersOfResult.unknown / results.length)}% | $
 - Please check out the csv report [here](${url}).
         `;
 
-    // const emailMessage = sskts.factory.creativeWork.message.email.create({
+    // const emailMessage = cinerino.factory.creativeWork.message.email.create({
     //     identifier: 'identifier',
     //     sender: {
     //         name: 'SSKTS Report',
@@ -255,7 +255,7 @@ unknown | ${Math.floor(HUNDRED * numbersOfResult.unknown / results.length)}% | $
     //     about: subject,
     //     text: text
     // });
-    // await sskts.service.notification.sendEmail(emailMessage)();
+    // await cinerino.service.notification.sendEmail(emailMessage)();
 
     // backlogへ通知
     const users = await request.get(
