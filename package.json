@@ -10,7 +10,7 @@
   ],
   "dependencies": {
     "@cinerino/domain": "1.0.0-alpha.162",
-    "@motionpicture/sskts-api-nodejs-client": "^6.0.1",
+    "@motionpicture/sskts-api-nodejs-client": "^6.1.0",
     "debug": "^3.2.6",
     "json2csv": "^3.11.5",
     "moment": "^2.24.0",

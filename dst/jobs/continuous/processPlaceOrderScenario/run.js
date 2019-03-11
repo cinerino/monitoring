@@ -17,12 +17,12 @@ const mongoose = require("mongoose");
 const processPlaceOrder = require("../../../controller/scenarios/processPlaceOrder");
 const mongooseConnectionOptions_1 = require("../../../mongooseConnectionOptions");
 const debug = createDebug('cinerino-monitoring');
-if (process.env.CONTINUOUS_SCENARIOS_STOPPED === '1') {
+if (process.env.RUN_SSKTS_CONTINUOUS_SCENARIOS !== '1') {
     process.exit(0);
 }
 debug('start executing scenarios...');
 // tslint:disable-next-line:no-magic-numbers
-const INTERVAL = parseInt(process.env.CONTINUOUS_SCENARIOS_INTERVAL_IN_SECONDS, 10) * 1000;
+const INTERVAL = parseInt(process.env.SSKTS_CONTINUOUS_SCENARIOS_INTERVAL_IN_SECONDS, 10) * 1000;
 mongoose.connect(process.env.MONGOLAB_URI, mongooseConnectionOptions_1.default)
     .then()
     // tslint:disable-next-line:no-console
