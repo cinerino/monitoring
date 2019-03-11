@@ -11,21 +11,21 @@ Object.defineProperty(exports, "__esModule", { value: true });
 /**
  * 販売者向け測定データを作成する
  */
-const sskts = require("@motionpicture/sskts-domain");
+const cinerino = require("@cinerino/domain");
 const createDebug = require("debug");
 const moment = require("moment");
 const mongoose = require("mongoose");
 const mongooseConnectionOptions_1 = require("../../../mongooseConnectionOptions");
-const debug = createDebug('sskts-monitoring-jobs');
+const debug = createDebug('cinerino-monitoring');
 function main() {
     return __awaiter(this, void 0, void 0, function* () {
         debug('connecting mongodb...');
         yield mongoose.connect(process.env.MONGOLAB_URI, mongooseConnectionOptions_1.default);
-        const sellerRepo = new sskts.repository.Seller(mongoose.connection);
-        const taskRepo = new sskts.repository.Task(mongoose.connection);
-        const telemetryRepo = new sskts.repository.Telemetry(mongoose.connection);
-        const transactionRepo = new sskts.repository.Transaction(mongoose.connection);
-        const actionRepo = new sskts.repository.Action(mongoose.connection);
+        const sellerRepo = new cinerino.repository.Seller(mongoose.connection);
+        const taskRepo = new cinerino.repository.Task(mongoose.connection);
+        const telemetryRepo = new cinerino.repository.Telemetry(mongoose.connection);
+        const transactionRepo = new cinerino.repository.Transaction(mongoose.connection);
+        const actionRepo = new cinerino.repository.Action(mongoose.connection);
         debug('creating telemetry...');
         // 取引セッション時間に対して十分に時間を置いて計測する
         const dateNow = moment()
@@ -36,7 +36,7 @@ function main() {
         // 劇場組織ごとに販売者向け測定データを作成する
         const movieTheaters = yield sellerRepo.search({});
         yield Promise.all(movieTheaters.map((movieTheater) => __awaiter(this, void 0, void 0, function* () {
-            yield sskts.service.report.telemetry.createFlow({
+            yield cinerino.service.report.telemetry.createFlow({
                 measuredAt: measuredAt.toDate(),
                 sellerId: movieTheater.id
             })({
@@ -46,7 +46,7 @@ function main() {
                 action: actionRepo
             });
         })));
-        yield sskts.service.report.telemetry.createFlow({
+        yield cinerino.service.report.telemetry.createFlow({
             measuredAt: measuredAt.toDate()
         })({
             task: taskRepo,

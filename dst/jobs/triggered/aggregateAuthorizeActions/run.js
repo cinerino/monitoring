@@ -11,23 +11,23 @@ Object.defineProperty(exports, "__esModule", { value: true });
 /**
  * 承認アクションについて分析する
  */
-const sskts = require("@motionpicture/sskts-domain");
+const cinerino = require("@cinerino/domain");
 const createDebug = require("debug");
 // import * as fs from 'fs';
 const moment = require("moment");
 const mongoose = require("mongoose");
 const request = require("request-promise-native");
 const mongooseConnectionOptions_1 = require("../../../mongooseConnectionOptions");
-const debug = createDebug('sskts-monitoring-jobs');
+const debug = createDebug('cinerino-monitoring');
 const SUBJECT = '承認アクション集計';
 const BACKLOG_ISSUE_KEY = 'SSKTS-1179';
 // tslint:disable-next-line:max-func-body-length
 function main() {
     return __awaiter(this, void 0, void 0, function* () {
-        const actionRepo = new sskts.repository.Action(mongoose.connection);
+        const actionRepo = new cinerino.repository.Action(mongoose.connection);
         const targetObjectTypes = [
-            ...Object.values(sskts.factory.paymentMethodType),
-            sskts.factory.action.authorize.offer.seatReservation.ObjectType.SeatReservation
+            ...Object.values(cinerino.factory.paymentMethodType),
+            cinerino.factory.action.authorize.offer.seatReservation.ObjectType.SeatReservation
         ];
         const startThrough = moment()
             .add(0, 'hours')
@@ -38,9 +38,9 @@ function main() {
             .toDate();
         const results = yield Promise.all(targetObjectTypes.map((objectType) => __awaiter(this, void 0, void 0, function* () {
             const actions = yield actionRepo.actionModel.find({
-                typeOf: sskts.factory.actionType.AuthorizeAction,
+                typeOf: cinerino.factory.actionType.AuthorizeAction,
                 'object.typeOf': objectType,
-                actionStatus: sskts.factory.actionStatusType.CompletedActionStatus,
+                actionStatus: cinerino.factory.actionStatusType.CompletedActionStatus,
                 startDate: {
                     $gte: startFrom,
                     $lte: startThrough

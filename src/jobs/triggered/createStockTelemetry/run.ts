@@ -1,24 +1,24 @@
 /**
  * グローバル測定データを作成する
  */
-import * as sskts from '@motionpicture/sskts-domain';
+import * as cinerino from '@cinerino/domain';
 import * as createDebug from 'debug';
 import * as moment from 'moment';
 import * as mongoose from 'mongoose';
 
 import mongooseConnectionOptions from '../../../mongooseConnectionOptions';
 
-const debug = createDebug('sskts-monitoring-jobs');
+const debug = createDebug('cinerino-monitoring');
 
 export async function main() {
     debug('connecting mongodb...');
     await mongoose.connect(<string>process.env.MONGOLAB_URI, mongooseConnectionOptions);
 
-    const sellerRepo = new sskts.repository.Seller(mongoose.connection);
-    const taskRepo = new sskts.repository.Task(mongoose.connection);
-    const telemetryRepo = new sskts.repository.Telemetry(mongoose.connection);
-    const transactionRepo = new sskts.repository.Transaction(mongoose.connection);
-    const actionRepo = new sskts.repository.Action(mongoose.connection);
+    const sellerRepo = new cinerino.repository.Seller(mongoose.connection);
+    const taskRepo = new cinerino.repository.Task(mongoose.connection);
+    const telemetryRepo = new cinerino.repository.Telemetry(mongoose.connection);
+    const transactionRepo = new cinerino.repository.Transaction(mongoose.connection);
+    const actionRepo = new cinerino.repository.Action(mongoose.connection);
     debug('creating telemetry...');
 
     const dateNow = moment();
@@ -28,7 +28,7 @@ export async function main() {
     // 劇場組織ごとに販売者向け測定データを作成する
     const movieTheaters = await sellerRepo.search({});
     await Promise.all(movieTheaters.map(async (movieTheater) => {
-        await sskts.service.report.telemetry.createStock({
+        await cinerino.service.report.telemetry.createStock({
             measuredAt: measuredAt.toDate(),
             sellerId: movieTheater.id
         })({
@@ -39,7 +39,7 @@ export async function main() {
         });
     }));
 
-    await sskts.service.report.telemetry.createStock({
+    await cinerino.service.report.telemetry.createStock({
         measuredAt: measuredAt.toDate()
     })({
         task: taskRepo,

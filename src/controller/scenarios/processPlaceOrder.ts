@@ -2,13 +2,14 @@
 /**
  * 注文取引シナリオ
  */
+import * as cinerino from '@cinerino/domain';
+
 import * as ssktsapi from '@motionpicture/sskts-api-nodejs-client';
-import * as sskts from '@motionpicture/sskts-domain';
 import * as createDebug from 'debug';
 import * as moment from 'moment';
 import * as util from 'util';
 
-const debug = createDebug('sskts-monitoring-jobs');
+const debug = createDebug('cinerino-monitoring');
 
 const auth = new ssktsapi.auth.ClientCredentials({
     domain: <string>process.env.SSKTS_AUTHORIZE_SERVER_DOMAIN,
@@ -28,7 +29,7 @@ const sellers = new ssktsapi.service.Seller({
     auth: auth
 });
 
-const placeOrderTransactions = new ssktsapi.service.transaction.PlaceOrder({
+const placeOrderTransactions = new ssktsapi.service.txn.PlaceOrder({
     endpoint: <string>process.env.SSKTS_ENDPOINT,
     auth: auth
 });
@@ -54,7 +55,7 @@ export async function main(theaterCode: string, durationInMillisecond: number) {
         progress = 'searching events...';
         debug(progress);
         const searchEventsResult = await events.searchScreeningEvents({
-            typeOf: ssktsapi.factory.eventType.ScreeningEvent,
+            typeOf: ssktsapi.factory.chevre.eventType.ScreeningEvent,
             superEvent: { locationBranchCodes: [theaterCode] },
             startFrom: moment()
                 .toDate(),
@@ -88,12 +89,6 @@ export async function main(theaterCode: string, durationInMillisecond: number) {
         }
         const coaInfo = <ssktsapi.factory.event.screeningEvent.ICOAInfo>screeningEvent.coaInfo;
 
-        const dateJouei = coaInfo.dateJouei;
-        const titleCode = coaInfo.titleCode;
-        const titleBranchNum = coaInfo.titleBranchNum;
-        const timeBegin = coaInfo.timeBegin;
-        const screenCode = coaInfo.screenCode;
-
         // start a transaction
         progress = 'starting a transaction...';
         debug(progress);
@@ -102,34 +97,32 @@ export async function main(theaterCode: string, durationInMillisecond: number) {
                 // tslint:disable-next-line:no-magic-numbers
                 .add(durationInMillisecond + 120000, 'milliseconds')
                 .toDate(),
-            sellerId: movieTheaterOrganization.id
+            agent: {
+                identifier: [
+                    { name: 'scenarioProcessId', value: process.pid.toString() }
+                ]
+            },
+            seller: {
+                typeOf: ssktsapi.factory.organizationType.MovieTheater,
+                id: movieTheaterOrganization.id
+            }
+            // sellerId: movieTheaterOrganization.id
         });
         progress = `transaction started. ${transaction.id}`;
         debug(progress);
 
-        // search sales tickets from sskts.COA
+        // search sales tickets from cinerino.COA
         // このサンプルは1座席購入なので、制限単位が1枚以上の券種に絞る
-        const salesTicketResult = await sskts.COA.services.reserve.salesTicket({
-            theaterCode: theaterCode,
-            dateJouei: dateJouei,
-            titleCode: titleCode,
-            titleBranchNum: titleBranchNum,
-            timeBegin: timeBegin,
-            flgMember: sskts.COA.services.reserve.FlgMember.NonMember
+        const salesTicketResult = await cinerino.COA.services.reserve.salesTicket({
+            ...coaInfo,
+            flgMember: cinerino.COA.services.reserve.FlgMember.NonMember
         })
             .then((results) => results.filter((result) => result.limitUnit === '001' && result.limitCount === 1));
         progress = `${salesTicketResult.length} sales ticket found.`;
         debug(progress);
 
-        // search available seats from sskts.COA
-        const getStateReserveSeatResult = await sskts.COA.services.reserve.stateReserveSeat({
-            theaterCode: theaterCode,
-            dateJouei: dateJouei,
-            titleCode: titleCode,
-            titleBranchNum: titleBranchNum,
-            timeBegin: timeBegin,
-            screenCode: screenCode
-        });
+        // search available seats from cinerino.COA
+        const getStateReserveSeatResult = await cinerino.COA.services.reserve.stateReserveSeat(coaInfo);
         progress = `${getStateReserveSeatResult.cntReserveFree} seats available.`;
         debug(progress);
         const sectionCode = getStateReserveSeatResult.listSeat[0].seatSection;
@@ -257,7 +250,7 @@ export async function main(theaterCode: string, durationInMillisecond: number) {
                 .format('YYYYMMDD'),
             theaterCode,
             // tslint:disable-next-line:no-magic-numbers
-            `00000000${seatReservationAuthorization.result.updTmpReserveSeatResult.tmpReserveNum}`.slice(-8)
+            `00000000${seatReservationAuthorization.result.responseBody.tmpReserveNum}`.slice(-8)
         );
         progress = `authorizing credit card... ${orderIdPrefix}`;
         debug(progress);
@@ -267,21 +260,6 @@ export async function main(theaterCode: string, durationInMillisecond: number) {
         debug(progress);
 
         // await wait(5000);
-
-        // debug('canceling a credit card authorization...');
-        // await placeOrderTransactions.cancelCreditCardAuthorization({
-        //     transactionId: transaction.id,
-        //     authorizationId: creditCardAuthorization.id
-        // });
-
-        // await wait(5000);
-
-        // debug('recreating a credit card authorization...', orderId);
-        // await authorieCreditCardUntilSuccess(transaction.id, orderIdPrefix, amount).then((result) => {
-        //     creditCardAuthorization = result.creditCardAuthorization;
-        //     numberOfTryAuthorizeCreditCard = result.numberOfTryAuthorizeCreditCard
-        // });
-        // debug('creditCardAuthorization:', creditCardAuthorization, numberOfTryAuthorizeCreditCard);
 
         // 購入者情報入力時間
         // tslint:disable-next-line:no-magic-numbers
@@ -293,11 +271,13 @@ export async function main(theaterCode: string, durationInMillisecond: number) {
             givenName: 'たろう',
             familyName: 'もーしょん',
             telephone: '09012345678',
-            email: <string>process.env.SSKTS_DEVELOPER_EMAIL
+            email: <string>process.env.DEVELOPER_EMAIL
         };
         await placeOrderTransactions.setCustomerContact({
-            transactionId: transaction.id,
-            contact: contact
+            id: transaction.id,
+            object: {
+                customerContact: contact
+            }
         });
         progress = 'customer contact set.';
         debug(progress);
@@ -309,8 +289,7 @@ export async function main(theaterCode: string, durationInMillisecond: number) {
         progress = 'confirming a transaction...';
         debug(progress);
         const order = await placeOrderTransactions.confirm({
-            transactionId: transaction.id,
-            sendEmailMessage: true
+            id: transaction.id
         });
         progress = `transaction confirmed. ${order.orderNumber}`;
         debug(progress);
@@ -337,17 +316,20 @@ async function authorieCreditCardUntilSuccess(transactionId: string, orderIdPref
         await wait(RETRY_INTERVAL_IN_MILLISECONDS);
 
         try {
-            creditCardAuthorization = await placeOrderTransactions.createCreditCardAuthorization({
-                transactionId: transactionId,
-                // 試行毎にオーダーIDを変更
-                // tslint:disable-next-line:no-magic-numbers
-                orderId: `${orderIdPrefix}${`00${numberOfTryAuthorizeCreditCard.toString()}`.slice(-2)}`,
-                amount: amount,
-                method: sskts.GMO.utils.util.Method.Lump,
-                creditCard: {
-                    cardNo: '4111111111111111',
-                    expire: '2012',
-                    holderName: 'AA BB'
+            creditCardAuthorization = await placeOrderTransactions.authorizeCreditCardPayment({
+                purpose: { typeOf: ssktsapi.factory.transactionType.PlaceOrder, id: transactionId },
+                object: {
+                    typeOf: ssktsapi.factory.paymentMethodType.CreditCard,
+                    // 試行毎にオーダーIDを変更
+                    // tslint:disable-next-line:no-magic-numbers
+                    orderId: `${orderIdPrefix}${`00${numberOfTryAuthorizeCreditCard.toString()}`.slice(-2)}`,
+                    amount: amount,
+                    method: cinerino.GMO.utils.util.Method.Lump,
+                    creditCard: {
+                        cardNo: '4111111111111111',
+                        expire: '2024',
+                        holderName: 'TARO MOTION'
+                    }
                 }
             });
         } catch (error) {

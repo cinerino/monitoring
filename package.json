@@ -9,8 +9,8 @@
     }
   ],
   "dependencies": {
-    "@motionpicture/sskts-api-nodejs-client": "6.0.0-alpha.2",
-    "@motionpicture/sskts-domain": "^30.0.0",
+    "@cinerino/domain": "1.0.0-alpha.162",
+    "@motionpicture/sskts-api-nodejs-client": "^6.1.0",
     "debug": "^3.2.6",
     "json2csv": "^3.11.5",
     "moment": "^2.24.0",
@@ -18,12 +18,12 @@
     "request": "^2.88.0",
     "request-promise-native": "^1.0.7"
   },
-  "description": "Cinema Sunshine Monitoring Jobs",
+  "description": "Cinerino Monitoring",
   "devDependencies": {
     "@types/debug": "0.0.29",
     "@types/mocha": "^5.2.6",
-    "@types/mongoose": "^5.3.20",
-    "@types/node": "^10.12.29",
+    "@types/mongoose": "^5.3.21",
+    "@types/node": "^10.12.30",
     "@types/request": "^2.48.1",
     "@types/request-promise-native": "^1.0.15",
     "concurrently": "^4.1.0",
@@ -33,7 +33,7 @@
     "mocha": "^6.0.2",
     "rimraf": "^2.6.3",
     "tslint": "^5.13.1",
-    "tslint-microsoft-contrib": "^6.0.0",
+    "tslint-microsoft-contrib": "^6.1.0",
     "typescript": "^3.3.3333"
   },
   "engines": {
@@ -58,5 +58,5 @@
     "version": "git add -A",
     "postversion": "git push origin --tags"
   },
-  "version": "5.1.0"
+  "version": "6.0.0"
 }

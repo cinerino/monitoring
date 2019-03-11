@@ -11,14 +11,14 @@ Object.defineProperty(exports, "__esModule", { value: true });
 /**
  * クレジットカードオーソリアクションデータを集計する
  */
-const sskts = require("@motionpicture/sskts-domain");
+const cinerino = require("@cinerino/domain");
 const createDebug = require("debug");
 // import * as fs from 'fs';
 const moment = require("moment");
 const mongoose = require("mongoose");
 const request = require("request-promise-native");
 const mongooseConnectionOptions_1 = require("../../../mongooseConnectionOptions");
-const debug = createDebug('sskts-monitoring-jobs');
+const debug = createDebug('cinerino-monitoring');
 const SUBJECT = 'クレジットカード承認アクション集計';
 const HUNDRED = 100;
 if (process.env.CREDIT_CARD_AUTH_AGGREGATION_PERIOD_IN_DAYS === undefined) {
@@ -28,7 +28,7 @@ const AGGREGATION_PERIOD_IN_DAYS = parseInt(process.env.CREDIT_CARD_AUTH_AGGREGA
 // tslint:disable-next-line:max-func-body-length
 function main() {
     return __awaiter(this, void 0, void 0, function* () {
-        const actionRepo = new sskts.repository.Action(mongoose.connection);
+        const actionRepo = new cinerino.repository.Action(mongoose.connection);
         // 一定期間のクレジットカード承認アクションを検索
         const aggregationStartThrough = new Date();
         const aggregationStartFrom = moment(aggregationStartThrough)
@@ -40,13 +40,13 @@ function main() {
                 $gte: aggregationStartFrom,
                 $lt: aggregationStartThrough
             },
-            typeOf: sskts.factory.actionType.AuthorizeAction,
-            'object.typeOf': sskts.factory.paymentMethodType.CreditCard
+            typeOf: cinerino.factory.actionType.AuthorizeAction,
+            'object.typeOf': cinerino.factory.paymentMethodType.CreditCard
         })
             .then((docs) => docs.map((doc) => doc.toObject()));
         debug(actions.length, 'action(s) found.');
         // 失敗ステータスのアクションを検出
-        const failedActions = actions.filter((a) => a.actionStatus === sskts.factory.actionStatusType.FailedActionStatus);
+        const failedActions = actions.filter((a) => a.actionStatus === cinerino.factory.actionStatusType.FailedActionStatus);
         debug('GMOServiceBadRequestError:', failedActions.filter((a) => a.error.name === 'GMOServiceBadRequestError').length);
         // 失敗アクションについてエラー項目ごとにデータ整形
         const errorNames = [...new Set(failedActions.map((a) => a.error.name))];
@@ -57,9 +57,9 @@ function main() {
                 .map((a) => a.error.errors[0].userMessage))];
         // ステータスごとのアクション数を集計
         const numbersOfResult = {
-            completed: actions.filter((a) => a.actionStatus === sskts.factory.actionStatusType.CompletedActionStatus).length,
-            failed: actions.filter((a) => a.actionStatus === sskts.factory.actionStatusType.FailedActionStatus).length,
-            canceled: actions.filter((a) => a.actionStatus === sskts.factory.actionStatusType.CanceledActionStatus).length
+            completed: actions.filter((a) => a.actionStatus === cinerino.factory.actionStatusType.CompletedActionStatus).length,
+            failed: actions.filter((a) => a.actionStatus === cinerino.factory.actionStatusType.FailedActionStatus).length,
+            canceled: actions.filter((a) => a.actionStatus === cinerino.factory.actionStatusType.CanceledActionStatus).length
         };
         // エラー名を集計
         const errorNamesSummary = errorNames.map((errorName) => {

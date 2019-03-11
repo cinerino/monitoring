@@ -12,21 +12,21 @@ Object.defineProperty(exports, "__esModule", { value: true });
  * 座席予約の空席時間率を算出する
  * 実験的実装
  */
-const sskts = require("@motionpicture/sskts-domain");
+const cinerino = require("@cinerino/domain");
 const createDebug = require("debug");
 const fs = require("fs");
 const moment = require("moment");
 const mongoose = require("mongoose");
 const mongooseConnectionOptions_1 = require("../../../mongooseConnectionOptions");
-const debug = createDebug('sskts-monitoring-jobs');
+const debug = createDebug('cinerino-monitoring');
 const TIME_UNIT = 'seconds';
 // tslint:disable-next-line:max-func-body-length
 function aggregateOfferAvailableHoursRateByScreen(theaterCode, screenBranchCode) {
     return __awaiter(this, void 0, void 0, function* () {
         // ここ1ヵ月の座席に対する上映イベントリストを取得
-        const placeRepo = new sskts.repository.Place(mongoose.connection);
-        const eventRepo = new sskts.repository.Event(mongoose.connection);
-        const orderRepo = new sskts.repository.Order(mongoose.connection);
+        const placeRepo = new cinerino.repository.Place(mongoose.connection);
+        const eventRepo = new cinerino.repository.Event(mongoose.connection);
+        const orderRepo = new cinerino.repository.Order(mongoose.connection);
         const movieTheater = yield placeRepo.findMovieTheaterByBranchCode(theaterCode);
         const screeningRoom = movieTheater.containsPlace.find((p) => p.branchCode === screenBranchCode);
         if (screeningRoom === undefined) {
@@ -42,7 +42,7 @@ function aggregateOfferAvailableHoursRateByScreen(theaterCode, screenBranchCode)
             throw new Error('seats not found.');
         }
         let events = yield eventRepo.eventModel.find({
-            typeOf: sskts.factory.eventType.IndividualScreeningEvent,
+            typeOf: cinerino.factory.chevre.eventType.ScreeningEvent,
             startDate: {
                 $gte: moment()
                     // tslint:disable-next-line:no-magic-numbers

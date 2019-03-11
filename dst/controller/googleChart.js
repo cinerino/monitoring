@@ -12,11 +12,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const sskts = require("@motionpicture/sskts-domain");
+const cinerino = require("@cinerino/domain");
 const createDebug = require("debug");
 const moment = require("moment");
 const request = require("request-promise-native");
-const debug = createDebug('sskts-monitoring-jobs');
+const debug = createDebug('cinerino-monitoring');
 const GOOGLE_CHART_URL = 'https://chart.googleapis.com/chart';
 function publishUrl(params) {
     return __awaiter(this, void 0, void 0, function* () {
@@ -29,7 +29,7 @@ function publishUrl(params) {
             .then((body) => new Buffer(body, 'binary'));
         debug('creating block blob... buffer.length:', buffer.length);
         // 3ヵ月有効なブロブ
-        return sskts.service.util.uploadFile({
+        return cinerino.service.util.uploadFile({
             fileName: `monitoring-jobs-google-chart-${moment()
                 // tslint:disable-next-line:insecure-random no-magic-numbers
                 .format('YYMMDDHHmmssSSS')}-${Math.floor(Math.random() * 1000)}.png`,

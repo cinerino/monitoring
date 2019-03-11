@@ -1,7 +1,7 @@
 /**
  * 承認アクションについて分析する
  */
-import * as sskts from '@motionpicture/sskts-domain';
+import * as cinerino from '@cinerino/domain';
 import * as createDebug from 'debug';
 // import * as fs from 'fs';
 import * as moment from 'moment';
@@ -10,18 +10,18 @@ import * as request from 'request-promise-native';
 
 import mongooseConnectionOptions from '../../../mongooseConnectionOptions';
 
-const debug = createDebug('sskts-monitoring-jobs');
+const debug = createDebug('cinerino-monitoring');
 
 const SUBJECT = '承認アクション集計';
 const BACKLOG_ISSUE_KEY = 'SSKTS-1179';
 
 // tslint:disable-next-line:max-func-body-length
 export async function main() {
-    const actionRepo = new sskts.repository.Action(mongoose.connection);
+    const actionRepo = new cinerino.repository.Action(mongoose.connection);
 
     const targetObjectTypes = [
-        ...Object.values(sskts.factory.paymentMethodType),
-        sskts.factory.action.authorize.offer.seatReservation.ObjectType.SeatReservation
+        ...Object.values(cinerino.factory.paymentMethodType),
+        cinerino.factory.action.authorize.offer.seatReservation.ObjectType.SeatReservation
     ];
     const startThrough = moment()
         .add(0, 'hours')
@@ -34,9 +34,9 @@ export async function main() {
     const results = await Promise.all(targetObjectTypes.map(async (objectType) => {
         const actions = await actionRepo.actionModel.find(
             {
-                typeOf: sskts.factory.actionType.AuthorizeAction,
+                typeOf: cinerino.factory.actionType.AuthorizeAction,
                 'object.typeOf': objectType,
-                actionStatus: sskts.factory.actionStatusType.CompletedActionStatus,
+                actionStatus: cinerino.factory.actionStatusType.CompletedActionStatus,
                 startDate: {
                     $gte: startFrom,
                     $lte: startThrough

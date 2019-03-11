@@ -11,13 +11,13 @@ Object.defineProperty(exports, "__esModule", { value: true });
 /**
  * フロー測定データを報告する
  */
-const sskts = require("@motionpicture/sskts-domain");
+const cinerino = require("@cinerino/domain");
 const createDebug = require("debug");
 const moment = require("moment");
 const mongoose = require("mongoose");
 const mongooseConnectionOptions_1 = require("../mongooseConnectionOptions");
 const GoogleChart = require("./googleChart");
-const debug = createDebug('sskts-monitoring-jobs');
+const debug = createDebug('cinerino-monitoring');
 const KILOSECONDS = 1000;
 const defaultParams = {
     chco: 'DAA8F5',
@@ -45,15 +45,15 @@ function main() {
         const measuredFrom = moment(dateNowByUnitTime)
             .add(numberOfAggregationUnit * -telemetryUnitTimeInSeconds, 'seconds');
         debug('reporting telemetries...', measuredFrom, '-', dateNowByUnitTime);
-        const sellerRepo = new sskts.repository.Seller(mongoose.connection);
-        const telemetryRepo = new sskts.repository.Telemetry(mongoose.connection);
+        const sellerRepo = new cinerino.repository.Seller(mongoose.connection);
+        const telemetryRepo = new cinerino.repository.Telemetry(mongoose.connection);
         const movieTheaters = yield sellerRepo.search({});
-        const globalTelemetries = yield sskts.service.report.telemetry.searchGlobalFlow({
+        const globalTelemetries = yield cinerino.service.report.telemetry.searchGlobalFlow({
             measuredFrom: measuredFrom.toDate(),
             measuredThrough: dateNowByUnitTime.toDate()
         })({ telemetry: telemetryRepo });
         debug('globalTelemetries length:', globalTelemetries.length);
-        const sellerTelemetries = yield sskts.service.report.telemetry.searchSellerFlow({
+        const sellerTelemetries = yield cinerino.service.report.telemetry.searchSellerFlow({
             measuredFrom: measuredFrom.toDate(),
             measuredThrough: dateNowByUnitTime.toDate()
         })({ telemetry: telemetryRepo });
@@ -81,8 +81,8 @@ exports.main = main;
  */
 function reportNumberOfTrialsOfTasks(telemetries, measuredFrom, measuredThrough) {
     return __awaiter(this, void 0, void 0, function* () {
-        const targetTaskNames = Object.keys(sskts.factory.taskName)
-            .map((k) => sskts.factory.taskName[k]);
+        const targetTaskNames = Object.keys(cinerino.factory.taskName)
+            .map((k) => cinerino.factory.taskName[k]);
         yield Promise.all(targetTaskNames.map((taskName) => __awaiter(this, void 0, void 0, function* () {
             const xLabels = createXLabels(measuredFrom, measuredThrough);
             const params = Object.assign({}, defaultParams, {
@@ -123,7 +123,7 @@ function reportNumberOfTrialsOfTasks(telemetries, measuredFrom, measuredThrough)
                 .join(',');
             const imageFullsize = yield GoogleChart.publishUrl(params);
             debug('url published.', imageFullsize);
-            yield sskts.service.notification.report2developers(`タスク実行試行回数\n${taskName}`, '', imageFullsize, imageFullsize)();
+            yield cinerino.service.notification.report2developers(`タスク実行試行回数\n${taskName}`, '', imageFullsize, imageFullsize)();
         })));
     });
 }
@@ -132,8 +132,8 @@ function reportNumberOfTrialsOfTasks(telemetries, measuredFrom, measuredThrough)
  */
 function reportLatenciesOfTasks(telemetries, measuredFrom, measuredThrough) {
     return __awaiter(this, void 0, void 0, function* () {
-        const targetTaskNames = Object.keys(sskts.factory.taskName)
-            .map((k) => sskts.factory.taskName[k]);
+        const targetTaskNames = Object.keys(cinerino.factory.taskName)
+            .map((k) => cinerino.factory.taskName[k]);
         yield Promise.all(targetTaskNames.map((taskName) => __awaiter(this, void 0, void 0, function* () {
             const xLabels = createXLabels(measuredFrom, measuredThrough);
             const params = Object.assign({}, defaultParams, {
@@ -174,7 +174,7 @@ function reportLatenciesOfTasks(telemetries, measuredFrom, measuredThrough) {
                 .join(',');
             const imageFullsize = yield GoogleChart.publishUrl(params);
             debug('url published.', imageFullsize);
-            yield sskts.service.notification.report2developers(`タスク待機時間\n${taskName}`, '', imageFullsize, imageFullsize)();
+            yield cinerino.service.notification.report2developers(`タスク待機時間\n${taskName}`, '', imageFullsize, imageFullsize)();
         })));
     });
 }
@@ -200,7 +200,7 @@ function reportNumberOfTransactionsByStatuses(sellerName, telemetries, measuredF
             .join(',')}`;
         const imageFullsize = yield GoogleChart.publishUrl(params);
         debug('url published.', imageFullsize);
-        yield sskts.service.notification.report2developers(`${sellerName}\n分あたりの開始取引数\n分あたりの成立取引数\n分あたりの離脱取引数`, '', imageFullsize, imageFullsize)();
+        yield cinerino.service.notification.report2developers(`${sellerName}\n分あたりの開始取引数\n分あたりの成立取引数\n分あたりの離脱取引数`, '', imageFullsize, imageFullsize)();
     });
 }
 /**
@@ -240,7 +240,7 @@ function reportExpiredRatio(sellerName, telemetries, measuredFrom, measuredThrou
             .join(',')}`;
         const imageFullsize = yield GoogleChart.publishUrl(params);
         debug('url published.', imageFullsize);
-        yield sskts.service.notification.report2developers(`${sellerName}\n${AGGREGATION_UNIT_IN_MINUTES}分ごとの取引離脱率`, '', imageFullsize, imageFullsize)();
+        yield cinerino.service.notification.report2developers(`${sellerName}\n${AGGREGATION_UNIT_IN_MINUTES}分ごとの取引離脱率`, '', imageFullsize, imageFullsize)();
     });
 }
 /**
@@ -268,7 +268,7 @@ function reportTimeLeftUntilEvent(sellerName, telemetries, measuredFrom, measure
             .join(',');
         const imageFullsize = yield GoogleChart.publishUrl(params);
         debug('url published.', imageFullsize);
-        yield sskts.service.notification.report2developers(`${sellerName}\n何時間前に予約したか`, '', imageFullsize, imageFullsize)();
+        yield cinerino.service.notification.report2developers(`${sellerName}\n何時間前に予約したか`, '', imageFullsize, imageFullsize)();
     });
 }
 /**
@@ -290,7 +290,7 @@ function reportTransactionRequiredTimes(sellerName, telemetries, measuredFrom, m
             .join(',');
         const imageFullsize = yield GoogleChart.publishUrl(params);
         debug('url published.', imageFullsize);
-        yield sskts.service.notification.report2developers(`${sellerName}\n分ごとの平均取引所要時間`, '', imageFullsize, imageFullsize)();
+        yield cinerino.service.notification.report2developers(`${sellerName}\n分ごとの平均取引所要時間`, '', imageFullsize, imageFullsize)();
     });
 }
 /**
@@ -311,7 +311,7 @@ function reportTransactionAmounts(sellerName, telemetries, measuredFrom, measure
             .join(',');
         const imageFullsize = yield GoogleChart.publishUrl(params);
         debug('url published.', imageFullsize);
-        yield sskts.service.notification.report2developers(`${sellerName}\n分ごとの平均取引金額`, '', imageFullsize, imageFullsize)();
+        yield cinerino.service.notification.report2developers(`${sellerName}\n分ごとの平均取引金額`, '', imageFullsize, imageFullsize)();
     });
 }
 /**
@@ -334,7 +334,7 @@ function reportTransactionActions(sellerName, telemetries, measuredFrom, measure
             .join(',')}`;
         const imageFullsize = yield GoogleChart.publishUrl(params);
         debug('url published.', imageFullsize);
-        yield sskts.service.notification.report2developers(`${sellerName}\n分ごとの平均取引承認アクション数`, '', imageFullsize, imageFullsize)();
+        yield cinerino.service.notification.report2developers(`${sellerName}\n分ごとの平均取引承認アクション数`, '', imageFullsize, imageFullsize)();
     });
 }
 function createXLabels(measuredFrom, measuredThrough) {
