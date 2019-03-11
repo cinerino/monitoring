@@ -18,6 +18,12 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ### Security
 
+## v6.0.0 - 2019-03-11
+
+### Changed
+
+- @cinerino/api-nodejs-clientで再構築
+
 ## v5.1.0 - 2019-03-04
 
 ### Added
