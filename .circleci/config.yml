@@ -115,21 +115,21 @@ workflows:
       - doc:
           requires:
             - test
-      - deploy2development:
-          requires:
-            - doc
-          filters:
-            branches:
-              only: develop
-      - prerelease:
-          requires:
-            - doc
-          filters:
-            branches:
-              only: /feature\/.+-alpha.+/
-      - deploy:
-          requires:
-            - doc
-          filters:
-            branches:
-              only: master
+      # - deploy2development:
+      #     requires:
+      #       - doc
+      #     filters:
+      #       branches:
+      #         only: develop
+      # - prerelease:
+      #     requires:
+      #       - doc
+      #     filters:
+      #       branches:
+      #         only: /feature\/.+-alpha.+/
+      # - deploy:
+      #     requires:
+      #       - doc
+      #     filters:
+      #       branches:
+      #         only: master
