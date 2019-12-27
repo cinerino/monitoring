@@ -1,9 +1,10 @@
 "use strict";
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
         function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
         function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : new P(function (resolve) { resolve(result.value); }).then(fulfilled, rejected); }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
@@ -19,12 +20,12 @@ const mongoose = require("mongoose");
 const request = require("request-promise-native");
 const mongooseConnectionOptions_1 = require("../../../mongooseConnectionOptions");
 const debug = createDebug('cinerino-monitoring');
-const SUBJECT = 'クレジットカード承認アクション集計';
+const SUBJECT = 'Credit Card Authorize Action Aggregation';
 const HUNDRED = 100;
 if (process.env.CREDIT_CARD_AUTH_AGGREGATION_PERIOD_IN_DAYS === undefined) {
     throw new Error('Environment variable \'CREDIT_CARD_AUTH_AGGREGATION_PERIOD_IN_DAYS\' required.');
 }
-const AGGREGATION_PERIOD_IN_DAYS = parseInt(process.env.CREDIT_CARD_AUTH_AGGREGATION_PERIOD_IN_DAYS, 10);
+const AGGREGATION_PERIOD_IN_DAYS = Number(process.env.CREDIT_CARD_AUTH_AGGREGATION_PERIOD_IN_DAYS);
 // tslint:disable-next-line:max-func-body-length
 function main() {
     return __awaiter(this, void 0, void 0, function* () {
@@ -34,77 +35,113 @@ function main() {
         const aggregationStartFrom = moment(aggregationStartThrough)
             .add(-AGGREGATION_PERIOD_IN_DAYS, 'day')
             .toDate();
+        let sampleCount = 0;
+        const numbersOfResult = {
+            completed: 0,
+            failed: 0,
+            canceled: 0
+        };
+        let errorNamesSummary = [];
+        let errorMessagesSummary = [];
+        let contentSummary = [];
+        let userMessagesSummary = [];
         debug('searching authorize actions...');
-        const actions = yield actionRepo.actionModel.find({
+        const cursor = actionRepo.actionModel.find({
             startDate: {
                 $gte: aggregationStartFrom,
                 $lt: aggregationStartThrough
             },
             typeOf: cinerino.factory.actionType.AuthorizeAction,
-            'object.typeOf': cinerino.factory.paymentMethodType.CreditCard
+            'object.typeOf': { $exists: true, $eq: cinerino.factory.paymentMethodType.CreditCard }
         })
-            .then((docs) => docs.map((doc) => doc.toObject()));
-        debug(actions.length, 'action(s) found.');
-        // 失敗ステータスのアクションを検出
-        const failedActions = actions.filter((a) => a.actionStatus === cinerino.factory.actionStatusType.FailedActionStatus);
-        debug('GMOServiceBadRequestError:', failedActions.filter((a) => a.error.name === 'GMOServiceBadRequestError').length);
-        // 失敗アクションについてエラー項目ごとにデータ整形
-        const errorNames = [...new Set(failedActions.map((a) => a.error.name))];
-        const errorMessages = [...new Set(failedActions.map((a) => a.error.message))];
-        const contents = [...new Set(failedActions.filter((a) => Array.isArray(a.error.errors))
-                .map((a) => a.error.errors[0].content))];
-        const userMessages = [...new Set(failedActions.filter((a) => Array.isArray(a.error.errors))
-                .map((a) => a.error.errors[0].userMessage))];
-        // ステータスごとのアクション数を集計
-        const numbersOfResult = {
-            completed: actions.filter((a) => a.actionStatus === cinerino.factory.actionStatusType.CompletedActionStatus).length,
-            failed: actions.filter((a) => a.actionStatus === cinerino.factory.actionStatusType.FailedActionStatus).length,
-            canceled: actions.filter((a) => a.actionStatus === cinerino.factory.actionStatusType.CanceledActionStatus).length
-        };
-        // エラー名を集計
-        const errorNamesSummary = errorNames.map((errorName) => {
-            const count = failedActions.filter((a) => a.error.name === errorName).length;
-            return {
-                key: errorName,
-                ratio: Math.floor(HUNDRED * count / failedActions.length),
-                count: count,
-                total: failedActions.length
-            };
-        })
-            .sort((a, b) => b.ratio - a.ratio);
-        // エラーメッセージを集計
-        const errorMessagesSummary = errorMessages.map((errorMessage) => {
-            const count = failedActions.filter((a) => a.error.message === errorMessage).length;
-            return {
-                key: errorMessage,
-                ratio: Math.floor(HUNDRED * count / failedActions.length),
-                count: count,
-                total: failedActions.length
-            };
-        })
-            .sort((a, b) => b.ratio - a.ratio);
-        // GMOエラー内容を集計
-        const contentSummary = contents.map((content) => {
-            const count = failedActions.filter((a) => Array.isArray(a.error.errors) && a.error.errors[0].content === content).length;
-            return {
-                key: content,
-                ratio: Math.floor(HUNDRED * count / failedActions.length),
-                count: count,
-                total: failedActions.length
-            };
-        })
-            .sort((a, b) => b.ratio - a.ratio);
-        // GMOユーザー向けメッセージを集計
-        const userMessagesSummary = userMessages.map((userMessage) => {
-            const count = failedActions.filter((a) => Array.isArray(a.error.errors) && a.error.errors[0].userMessage === userMessage).length;
-            return {
-                key: userMessage,
-                ratio: Math.floor(HUNDRED * count / failedActions.length),
-                count: count,
-                total: failedActions.length
-            };
-        })
-            .sort((a, b) => b.ratio - a.ratio);
+            .cursor();
+        debug('action(s) found.');
+        // tslint:disable-next-line:max-func-body-length
+        yield cursor.eachAsync((doc) => __awaiter(this, void 0, void 0, function* () {
+            sampleCount += 1;
+            const action = doc.toObject();
+            // 失敗ステータスのアクションを検出
+            // const failedActions = actions.filter((a) => a.actionStatus === cinerino.factory.actionStatusType.FailedActionStatus);
+            // debug('GMOServiceBadRequestError:', failedActions.filter((a) => a.error.name === 'GMOServiceBadRequestError').length);
+            // ステータスごとのアクション数を集計
+            switch (action.actionStatus) {
+                case cinerino.factory.actionStatusType.ActiveActionStatus:
+                    break;
+                case cinerino.factory.actionStatusType.CanceledActionStatus:
+                    numbersOfResult.canceled += 1;
+                    break;
+                case cinerino.factory.actionStatusType.CompletedActionStatus:
+                    numbersOfResult.completed += 1;
+                    break;
+                // 失敗アクションについてエラー項目ごとにデータ整形
+                case cinerino.factory.actionStatusType.FailedActionStatus:
+                    numbersOfResult.failed += 1;
+                    let summary;
+                    // エラー名を集計
+                    const errorName = action.error.name;
+                    summary = errorNamesSummary.find((s) => s.key === errorName);
+                    if (summary === undefined) {
+                        errorNamesSummary.push({
+                            key: errorName,
+                            count: 1
+                        });
+                    }
+                    else {
+                        summary.count += 1;
+                    }
+                    // エラーメッセージを集計
+                    const errorMessage = action.error.message;
+                    summary = errorMessagesSummary.find((s) => s.key === errorMessage);
+                    if (summary === undefined) {
+                        errorMessagesSummary.push({
+                            key: errorMessage,
+                            count: 1
+                        });
+                    }
+                    else {
+                        summary.count += 1;
+                    }
+                    // GMOエラー内容を集計
+                    const content = (Array.isArray(action.error.errors))
+                        ? action.error.errors[0].content
+                        : undefined;
+                    if (content !== undefined) {
+                        summary = contentSummary.find((s) => s.key === content);
+                        if (summary === undefined) {
+                            contentSummary.push({
+                                key: content,
+                                count: 1
+                            });
+                        }
+                        else {
+                            summary.count += 1;
+                        }
+                    }
+                    // GMOエラー内容を集計
+                    const userMessage = (Array.isArray(action.error.errors))
+                        ? action.error.errors[0].userMessage
+                        : undefined;
+                    if (userMessage !== undefined) {
+                        summary = userMessagesSummary.find((s) => s.key === userMessage);
+                        if (summary === undefined) {
+                            userMessagesSummary.push({
+                                key: userMessage,
+                                count: 1
+                            });
+                        }
+                        else {
+                            summary.count += 1;
+                        }
+                    }
+                    break;
+                default:
+            }
+            errorNamesSummary = errorNamesSummary.sort((a, b) => b.count - a.count);
+            errorMessagesSummary = errorMessagesSummary.sort((a, b) => b.count - a.count);
+            contentSummary = contentSummary.sort((a, b) => b.count - a.count);
+            userMessagesSummary = userMessagesSummary.sort((a, b) => b.count - a.count);
+            debug('----------------');
+        }));
         const text = `## ${SUBJECT}
 ### Configurations
 key  | value
@@ -113,30 +150,30 @@ databaseName  | ${mongoose.connection.db.databaseName}
 集計対象期間  | ${aggregationStartFrom.toISOString()} - ${aggregationStartThrough.toISOString()}
 
 ### Summary
-アクションステータス | ratio | number of results
+Action Status | ratio | number of results
 ------ | ------ | ------
-completed | ${Math.floor(HUNDRED * numbersOfResult.completed / actions.length)}% | ${numbersOfResult.completed}/${actions.length}
-failed | ${Math.floor(HUNDRED * numbersOfResult.failed / actions.length)}% | ${numbersOfResult.failed}/${actions.length}
-canceled | ${Math.floor(HUNDRED * numbersOfResult.canceled / actions.length)}% | ${numbersOfResult.canceled}/${actions.length}
+completed | ${Math.floor(HUNDRED * numbersOfResult.completed / sampleCount)}% | ${numbersOfResult.completed}/${sampleCount}
+failed | ${Math.floor(HUNDRED * numbersOfResult.failed / sampleCount)}% | ${numbersOfResult.failed}/${sampleCount}
+canceled | ${Math.floor(HUNDRED * numbersOfResult.canceled / sampleCount)}% | ${numbersOfResult.canceled}/${sampleCount}
 
-アクションエラーネーム | ratio | number of results
+Error Name | ratio | number of results
 ------ | ------ | ------
-${errorNamesSummary.map((s) => `${s.key} | ${s.ratio}% | ${s.count}/${s.total}`)
+${errorNamesSummary.map((s) => `${s.key} | ${Math.floor(HUNDRED * s.count / numbersOfResult.failed)}% | ${s.count}/${numbersOfResult.failed}`)
             .join('\n')}
 
-アクションエラーメッセージ | ratio | number of results
+Error Message | ratio | number of results
 ------ | ------ | ------
-${errorMessagesSummary.map((s) => `${s.key} | ${s.ratio}% | ${s.count}/${s.total}`)
+${errorMessagesSummary.map((s) => `${s.key} | ${Math.floor(HUNDRED * s.count / numbersOfResult.failed)}% | ${s.count}/${numbersOfResult.failed}`)
             .join('\n')}
 
-GMOエラー内容 | ratio | number of results
+GMO Error Content | ratio | number of results
 ------ | ------ | ------
-${contentSummary.map((s) => `${s.key} | ${s.ratio}% | ${s.count}/${s.total}`)
+${contentSummary.map((s) => `${s.key} | ${Math.floor(HUNDRED * s.count / numbersOfResult.failed)}% | ${s.count}/${numbersOfResult.failed}`)
             .join('\n')}
 
-GMOユーザーメッセージ | ratio | number of results
+GMO User Message | ratio | number of results
 ------ | ------ | ------
-${userMessagesSummary.map((s) => `${s.key} | ${s.ratio}% | ${s.count}/${s.total}`)
+${userMessagesSummary.map((s) => `${s.key} | ${Math.floor(HUNDRED * s.count / numbersOfResult.failed)}% | ${s.count}/${numbersOfResult.failed}`)
             .join('\n')}
         `;
         // tslint:disable-next-line:max-line-length
@@ -164,16 +201,21 @@ ${userMessagesSummary.map((s) => `${s.key} | ${s.ratio}% | ${s.count}/${s.total}
 }
 exports.main = main;
 mongoose.connect(process.env.MONGOLAB_URI, mongooseConnectionOptions_1.default)
-    .then(() => __awaiter(this, void 0, void 0, function* () {
+    .then(() => __awaiter(void 0, void 0, void 0, function* () {
     try {
         yield main();
+        setInterval(() => __awaiter(void 0, void 0, void 0, function* () {
+            yield main();
+        }), 
+        // tslint:disable-next-line:no-magic-numbers
+        300000);
         debug('success!');
     }
     catch (error) {
         // tslint:disable-next-line:no-console
         console.error(error);
     }
-    yield mongoose.disconnect();
+    // await mongoose.disconnect();
 }))
     // tslint:disable-next-line:no-console
     .catch(console.error);

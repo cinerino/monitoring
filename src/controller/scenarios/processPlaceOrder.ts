@@ -4,33 +4,35 @@
  */
 import * as cinerino from '@cinerino/domain';
 
-import * as ssktsapi from '@motionpicture/sskts-api-nodejs-client';
+import * as cinerinoapi from '@cinerino/api-nodejs-client';
 import * as createDebug from 'debug';
 import * as moment from 'moment';
 import * as util from 'util';
 
 const debug = createDebug('cinerino-monitoring');
 
-const auth = new ssktsapi.auth.ClientCredentials({
-    domain: <string>process.env.SSKTS_AUTHORIZE_SERVER_DOMAIN,
-    clientId: <string>process.env.SSKTS_CLIENT_ID,
-    clientSecret: <string>process.env.SSKTS_CLIENT_SECRET,
+const auth = new cinerinoapi.auth.ClientCredentials({
+    domain: <string>process.env.API_AUTHORIZE_SERVER_DOMAIN,
+    clientId: <string>process.env.API_CLIENT_ID,
+    clientSecret: <string>process.env.API_CLIENT_SECRET,
     scopes: [],
     state: 'teststate'
 });
 
-const events = new ssktsapi.service.Event({
-    endpoint: <string>process.env.SSKTS_ENDPOINT,
+const events = new cinerinoapi.service.Event({
+    endpoint: <string>process.env.API_ENDPOINT,
     auth: auth
 });
-
-const sellers = new ssktsapi.service.Seller({
-    endpoint: <string>process.env.SSKTS_ENDPOINT,
+const sellers = new cinerinoapi.service.Seller({
+    endpoint: <string>process.env.API_ENDPOINT,
     auth: auth
 });
-
-const placeOrderTransactions = new ssktsapi.service.txn.PlaceOrder({
-    endpoint: <string>process.env.SSKTS_ENDPOINT,
+const placeOrderService = new cinerinoapi.service.txn.PlaceOrder4sskts({
+    endpoint: <string>process.env.API_ENDPOINT,
+    auth: auth
+});
+const paymentService = new cinerinoapi.service.Payment({
+    endpoint: <string>process.env.API_ENDPOINT,
     auth: auth
 });
 
@@ -40,22 +42,21 @@ export async function main(theaterCode: string, durationInMillisecond: number) {
     let progress = '';
 
     try {
-        // search movie theater organizations
         const searchSellersResult = await sellers.search({
             location: { branchCodes: [theaterCode] }
         });
-        const movieTheaterOrganization = searchSellersResult.data.shift();
-        if (movieTheaterOrganization === undefined) {
-            throw new Error('movie theater shop not open');
+        const seller = searchSellersResult.data.shift();
+        if (seller === undefined) {
+            throw new Error('seller not found');
         }
-        progress = `movie theater found. ${movieTheaterOrganization.id}`;
+        progress = `seller found. ${seller.id}`;
         debug(progress);
 
         // search screening events
         progress = 'searching events...';
         debug(progress);
-        const searchEventsResult = await events.searchScreeningEvents({
-            typeOf: ssktsapi.factory.chevre.eventType.ScreeningEvent,
+        const searchEventsResult = await events.search({
+            typeOf: cinerinoapi.factory.chevre.eventType.ScreeningEvent,
             superEvent: { locationBranchCodes: [theaterCode] },
             startFrom: moment()
                 .toDate(),
@@ -83,16 +84,16 @@ export async function main(theaterCode: string, durationInMillisecond: number) {
 
         // retrieve an event detail
 
-        const screeningEvent = await events.findScreeningEventById(availableEvent);
+        const screeningEvent = await events.findById({ id: availableEvent.id });
         if (screeningEvent === null) {
             throw new Error('Specified screening event not found');
         }
-        const coaInfo = <ssktsapi.factory.event.screeningEvent.ICOAInfo>screeningEvent.coaInfo;
+        const coaInfo = <cinerinoapi.factory.event.screeningEvent.ICOAInfo>screeningEvent.coaInfo;
 
         // start a transaction
         progress = 'starting a transaction...';
         debug(progress);
-        const transaction = await placeOrderTransactions.start({
+        const transaction = await placeOrderService.start({
             expires: moment()
                 // tslint:disable-next-line:no-magic-numbers
                 .add(durationInMillisecond + 120000, 'milliseconds')
@@ -103,8 +104,8 @@ export async function main(theaterCode: string, durationInMillisecond: number) {
                 ]
             },
             seller: {
-                typeOf: ssktsapi.factory.organizationType.MovieTheater,
-                id: movieTheaterOrganization.id
+                typeOf: cinerinoapi.factory.organizationType.MovieTheater,
+                id: seller.id
             }
             // sellerId: movieTheaterOrganization.id
         });
@@ -113,16 +114,23 @@ export async function main(theaterCode: string, durationInMillisecond: number) {
 
         // search sales tickets from cinerino.COA
         // このサンプルは1座席購入なので、制限単位が1枚以上の券種に絞る
-        const salesTicketResult = await cinerino.COA.services.reserve.salesTicket({
+        const reserveService = new cinerino.COA.service.Reserve({
+            endpoint: <string>process.env.COA_ENDPOINT,
+            auth: new cinerino.COA.auth.RefreshToken({
+                endpoint: <string>process.env.COA_ENDPOINT,
+                refreshToken: <string>process.env.COA_REFRESH_TOKEN
+            })
+        });
+        const salesTicketResult = await reserveService.salesTicket({
             ...coaInfo,
-            flgMember: cinerino.COA.services.reserve.FlgMember.NonMember
+            flgMember: cinerino.COA.factory.reserve.FlgMember.NonMember
         })
             .then((results) => results.filter((result) => result.limitUnit === '001' && result.limitCount === 1));
         progress = `${salesTicketResult.length} sales ticket found.`;
         debug(progress);
 
         // search available seats from cinerino.COA
-        const getStateReserveSeatResult = await cinerino.COA.services.reserve.stateReserveSeat(coaInfo);
+        const getStateReserveSeatResult = await reserveService.stateReserveSeat(coaInfo);
         progress = `${getStateReserveSeatResult.cntReserveFree} seats available.`;
         debug(progress);
         const sectionCode = getStateReserveSeatResult.listSeat[0].seatSection;
@@ -143,27 +151,29 @@ export async function main(theaterCode: string, durationInMillisecond: number) {
 
         progress = 'authorizing seat reservation...';
         debug(progress);
-        let seatReservationAuthorization = await placeOrderTransactions.createSeatReservationAuthorization({
-            transactionId: transaction.id,
-            eventIdentifier: screeningEvent.identifier,
-            offers: [
-                {
-                    seatSection: sectionCode,
-                    seatNumber: selectedSeatCode,
-                    ticketInfo: {
-                        ticketCode: selectedSalesTicket.ticketCode,
-                        mvtkAppPrice: 0,
-                        ticketCount: 1,
-                        addGlasses: selectedSalesTicket.addGlasses,
-                        kbnEisyahousiki: '00',
-                        mvtkNum: '',
-                        mvtkKbnDenshiken: '00',
-                        mvtkKbnMaeuriken: '00',
-                        mvtkKbnKensyu: '00',
-                        mvtkSalesPrice: 0
+        let seatReservationAuthorization = await placeOrderService.createSeatReservationAuthorization({
+            purpose: { typeOf: transaction.typeOf, id: transaction.id },
+            object: {
+                event: { id: screeningEvent.id },
+                acceptedOffer: [
+                    {
+                        seatSection: sectionCode,
+                        seatNumber: selectedSeatCode,
+                        ticketInfo: {
+                            ticketCode: selectedSalesTicket.ticketCode,
+                            mvtkAppPrice: 0,
+                            ticketCount: 1,
+                            addGlasses: selectedSalesTicket.addGlasses,
+                            kbnEisyahousiki: '00',
+                            mvtkNum: '',
+                            mvtkKbnDenshiken: '00',
+                            mvtkKbnMaeuriken: '00',
+                            mvtkKbnKensyu: '00',
+                            mvtkSalesPrice: 0
+                        }
                     }
-                }
-            ]
+                ]
+            }
         });
         progress = `seat reservation authorized. ${seatReservationAuthorization.id}`;
         debug(progress);
@@ -174,34 +184,36 @@ export async function main(theaterCode: string, durationInMillisecond: number) {
 
         progress = 'canceling seat reservation authorization...';
         debug(progress);
-        await placeOrderTransactions.cancelSeatReservationAuthorization({
-            transactionId: transaction.id,
-            actionId: seatReservationAuthorization.id
+        await placeOrderService.cancelSeatReservationAuthorization({
+            purpose: { typeOf: transaction.typeOf, id: transaction.id },
+            id: seatReservationAuthorization.id
         });
 
         progress = 'reauthorizaing seat reservation...';
         debug(progress);
-        seatReservationAuthorization = await placeOrderTransactions.createSeatReservationAuthorization({
-            transactionId: transaction.id,
-            eventIdentifier: screeningEvent.identifier,
-            offers: [
-                {
-                    seatSection: sectionCode,
-                    seatNumber: selectedSeatCode,
-                    ticketInfo: {
-                        ticketCode: selectedSalesTicket.ticketCode,
-                        mvtkAppPrice: 0,
-                        ticketCount: 1,
-                        addGlasses: selectedSalesTicket.addGlasses,
-                        kbnEisyahousiki: '00',
-                        mvtkNum: '',
-                        mvtkKbnDenshiken: '00',
-                        mvtkKbnMaeuriken: '00',
-                        mvtkKbnKensyu: '00',
-                        mvtkSalesPrice: 0
+        seatReservationAuthorization = await placeOrderService.createSeatReservationAuthorization({
+            purpose: { typeOf: transaction.typeOf, id: transaction.id },
+            object: {
+                event: { id: screeningEvent.id },
+                acceptedOffer: [
+                    {
+                        seatSection: sectionCode,
+                        seatNumber: selectedSeatCode,
+                        ticketInfo: {
+                            ticketCode: selectedSalesTicket.ticketCode,
+                            mvtkAppPrice: 0,
+                            ticketCount: 1,
+                            addGlasses: selectedSalesTicket.addGlasses,
+                            kbnEisyahousiki: '00',
+                            mvtkNum: '',
+                            mvtkKbnDenshiken: '00',
+                            mvtkKbnMaeuriken: '00',
+                            mvtkKbnKensyu: '00',
+                            mvtkSalesPrice: 0
+                        }
                     }
-                }
-            ]
+                ]
+            }
         });
         progress = `seat reservation authorized. ${seatReservationAuthorization.id}`;
         debug(progress);
@@ -214,28 +226,30 @@ export async function main(theaterCode: string, durationInMillisecond: number) {
         debug(progress);
         // select a ticket randomly
         selectedSalesTicket = salesTicketResult[Math.floor(salesTicketResult.length * Math.random())];
-        seatReservationAuthorization = await placeOrderTransactions.changeSeatReservationOffers({
-            transactionId: transaction.id,
-            actionId: seatReservationAuthorization.id,
-            eventIdentifier: screeningEvent.identifier,
-            offers: [
-                {
-                    seatSection: sectionCode,
-                    seatNumber: selectedSeatCode,
-                    ticketInfo: {
-                        ticketCode: selectedSalesTicket.ticketCode,
-                        mvtkAppPrice: 0,
-                        ticketCount: 1,
-                        addGlasses: selectedSalesTicket.addGlasses,
-                        kbnEisyahousiki: '00',
-                        mvtkNum: '',
-                        mvtkKbnDenshiken: '00',
-                        mvtkKbnMaeuriken: '00',
-                        mvtkKbnKensyu: '00',
-                        mvtkSalesPrice: 0
+        seatReservationAuthorization = await placeOrderService.changeSeatReservationOffers({
+            purpose: { typeOf: transaction.typeOf, id: transaction.id },
+            id: seatReservationAuthorization.id,
+            object: {
+                event: { id: screeningEvent.id },
+                acceptedOffer: [
+                    {
+                        seatSection: sectionCode,
+                        seatNumber: selectedSeatCode,
+                        ticketInfo: {
+                            ticketCode: selectedSalesTicket.ticketCode,
+                            mvtkAppPrice: 0,
+                            ticketCount: 1,
+                            addGlasses: selectedSalesTicket.addGlasses,
+                            kbnEisyahousiki: '00',
+                            mvtkNum: '',
+                            mvtkKbnDenshiken: '00',
+                            mvtkKbnMaeuriken: '00',
+                            mvtkKbnKensyu: '00',
+                            mvtkSalesPrice: 0
+                        }
                     }
-                }
-            ]
+                ]
+            }
         });
         progress = `sales ticket changed. ${seatReservationAuthorization.id}`;
         debug(progress);
@@ -265,21 +279,19 @@ export async function main(theaterCode: string, durationInMillisecond: number) {
         // tslint:disable-next-line:no-magic-numbers
         await wait(Math.floor(durationInMillisecond / 6));
 
-        progress = 'setting customer contact...';
+        progress = 'setting customer profile...';
         debug(progress);
-        const contact = {
+        const profile = {
             givenName: 'たろう',
             familyName: 'もーしょん',
             telephone: '09012345678',
             email: <string>process.env.DEVELOPER_EMAIL
         };
-        await placeOrderTransactions.setCustomerContact({
+        await placeOrderService.setProfile({
             id: transaction.id,
-            object: {
-                customerContact: contact
-            }
+            agent: profile
         });
-        progress = 'customer contact set.';
+        progress = 'customer profile set.';
         debug(progress);
 
         // 購入情報確認時間
@@ -288,7 +300,7 @@ export async function main(theaterCode: string, durationInMillisecond: number) {
 
         progress = 'confirming a transaction...';
         debug(progress);
-        const order = await placeOrderTransactions.confirm({
+        const { order } = await placeOrderService.confirm({
             id: transaction.id
         });
         progress = `transaction confirmed. ${order.orderNumber}`;
@@ -316,10 +328,10 @@ async function authorieCreditCardUntilSuccess(transactionId: string, orderIdPref
         await wait(RETRY_INTERVAL_IN_MILLISECONDS);
 
         try {
-            creditCardAuthorization = await placeOrderTransactions.authorizeCreditCardPayment({
-                purpose: { typeOf: ssktsapi.factory.transactionType.PlaceOrder, id: transactionId },
+            creditCardAuthorization = await paymentService.authorizeCreditCard({
+                purpose: { typeOf: cinerinoapi.factory.transactionType.PlaceOrder, id: transactionId },
                 object: {
-                    typeOf: ssktsapi.factory.paymentMethodType.CreditCard,
+                    typeOf: cinerinoapi.factory.paymentMethodType.CreditCard,
                     // 試行毎にオーダーIDを変更
                     // tslint:disable-next-line:no-magic-numbers
                     orderId: `${orderIdPrefix}${`00${numberOfTryAuthorizeCreditCard.toString()}`.slice(-2)}`,

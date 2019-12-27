@@ -457,7 +457,8 @@ function createXLabels(measuredFrom: Date, measuredThrough: Date) {
         .diff(moment(measuredFrom), 'hours');
     const numberOfLabels = 6;
 
-    return Array.from(Array(numberOfLabels + 1))
+    // tslint:disable-next-line:prefer-array-literal
+    return [...Array(numberOfLabels + 1)]
         .map((__, index) => {
             return moment(measuredFrom)
                 .add(diff / numberOfLabels * index, 'hours')

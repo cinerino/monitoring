@@ -10,14 +10,14 @@ import mongooseConnectionOptions from '../../../mongooseConnectionOptions';
 
 const debug = createDebug('cinerino-monitoring');
 
-if (process.env.RUN_SSKTS_CONTINUOUS_SCENARIOS !== '1') {
+if (process.env.RUN_CONTINUOUS_SCENARIOS !== '1') {
     process.exit(0);
 }
 
 debug('start executing scenarios...');
 
 // tslint:disable-next-line:no-magic-numbers
-const INTERVAL = parseInt(<string>process.env.SSKTS_CONTINUOUS_SCENARIOS_INTERVAL_IN_SECONDS, 10) * 1000;
+const INTERVAL = Number(<string>process.env.CONTINUOUS_SCENARIOS_INTERVAL_IN_SECONDS) * 1000;
 mongoose.connect(<string>process.env.MONGOLAB_URI, mongooseConnectionOptions)
     .then()
     // tslint:disable-next-line:no-console

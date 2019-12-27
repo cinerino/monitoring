@@ -1,9 +1,10 @@
 "use strict";
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
         function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
         function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : new P(function (resolve) { resolve(result.value); }).then(fulfilled, rejected); }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
@@ -21,18 +22,18 @@ const processPlaceOrder = require("../../../controller/scenarios/processPlaceOrd
 const debug = createDebug('cinerino-monitoring');
 startScenarios({
     // tslint:disable-next-line:no-magic-numbers
-    numberOfTrials: (process.argv[2] !== undefined) ? parseInt(process.argv[2], 10) : 10,
+    numberOfTrials: (process.argv[2] !== undefined) ? Number(process.argv[2]) : 10,
     // tslint:disable-next-line:no-magic-numbers
-    intervals: (process.argv[3] !== undefined) ? parseInt(process.argv[3], 10) : 1000,
+    intervals: (process.argv[3] !== undefined) ? Number(process.argv[3]) : 1000,
     // tslint:disable-next-line:no-magic-numbers
     sellerBranchCodes: (process.argv[4] !== undefined) ? process.argv[4].split(',') : [
         '101', '112', '116', '118', '119', '117', '114', '102', '106', '108', '107', '110', '109', '113', '115'
     ],
-    apiEndpoint: process.env.SSKTS_ENDPOINT,
+    apiEndpoint: process.env.API_ENDPOINT,
     // tslint:disable-next-line:no-magic-numbers
-    minDurationInSeconds: (process.argv[5] !== undefined) ? parseInt(process.argv[5], 10) : 300,
+    minDurationInSeconds: (process.argv[5] !== undefined) ? Number(process.argv[5]) : 300,
     // tslint:disable-next-line:no-magic-numbers
-    maxDurationInSeconds: (process.argv[6] !== undefined) ? parseInt(process.argv[6], 10) : 800
+    maxDurationInSeconds: (process.argv[6] !== undefined) ? Number(process.argv[6]) : 800
 });
 // tslint:disable-next-line:max-func-body-length
 function startScenarios(configurations) {
@@ -156,7 +157,7 @@ function reportResults(configurations, scenarioResults) {
                 .add(3, 'months')
                 .toDate()
         })();
-        const subject = 'Completion of SSKTS placeOrder transaction loadtest';
+        const subject = 'Completion of Cinerino PlaceOrder Transaction Loadtest';
         const numbersOfResult = {
             ok: results.filter((r) => r.orderNumber.length > 0).length,
             clientError: results.filter((r) => /^4\d{2}$/.test(r.errorCode)).length,
@@ -189,7 +190,7 @@ unknown | ${Math.floor(HUNDRED * numbersOfResult.unknown / results.length)}% | $
         // const emailMessage = cinerino.factory.creativeWork.message.email.create({
         //     identifier: 'identifier',
         //     sender: {
-        //         name: 'SSKTS Report',
+        //         name: 'Cinerino Report',
         //         email: 'noreply@example.com'
         //     },
         //     toRecipient: {

@@ -29,7 +29,7 @@ export async function publishUrl(params: any) {
         text: buffer,
         // tslint:disable-next-line:no-magic-numbers
         expiryDate: moment()
-            .add(parseInt(<string>process.env.CHART_EXPIRES_IN_MONTH, 10), 'months')
+            .add(Number(<string>process.env.CHART_EXPIRES_IN_MONTH), 'months')
             .toDate()
     })();
 }

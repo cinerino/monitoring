@@ -58,18 +58,18 @@ interface IResult {
 
 startScenarios({
     // tslint:disable-next-line:no-magic-numbers
-    numberOfTrials: (process.argv[2] !== undefined) ? parseInt(process.argv[2], 10) : 10,
+    numberOfTrials: (process.argv[2] !== undefined) ? Number(process.argv[2]) : 10,
     // tslint:disable-next-line:no-magic-numbers
-    intervals: (process.argv[3] !== undefined) ? parseInt(process.argv[3], 10) : 1000,
+    intervals: (process.argv[3] !== undefined) ? Number(process.argv[3]) : 1000,
     // tslint:disable-next-line:no-magic-numbers
     sellerBranchCodes: (process.argv[4] !== undefined) ? process.argv[4].split(',') : [
         '101', '112', '116', '118', '119', '117', '114', '102', '106', '108', '107', '110', '109', '113', '115'
     ],
-    apiEndpoint: <string>process.env.SSKTS_ENDPOINT,
+    apiEndpoint: <string>process.env.API_ENDPOINT,
     // tslint:disable-next-line:no-magic-numbers
-    minDurationInSeconds: (process.argv[5] !== undefined) ? parseInt(process.argv[5], 10) : 300,
+    minDurationInSeconds: (process.argv[5] !== undefined) ? Number(process.argv[5]) : 300,
     // tslint:disable-next-line:no-magic-numbers
-    maxDurationInSeconds: (process.argv[6] !== undefined) ? parseInt(process.argv[6], 10) : 800
+    maxDurationInSeconds: (process.argv[6] !== undefined) ? Number(process.argv[6]) : 800
 });
 
 // tslint:disable-next-line:max-func-body-length
@@ -209,7 +209,7 @@ async function reportResults(configurations: IConfigurations, scenarioResults: I
             .toDate()
     })();
 
-    const subject = 'Completion of SSKTS placeOrder transaction loadtest';
+    const subject = 'Completion of Cinerino PlaceOrder Transaction Loadtest';
 
     const numbersOfResult = {
         ok: results.filter((r) => r.orderNumber.length > 0).length,
@@ -245,7 +245,7 @@ unknown | ${Math.floor(HUNDRED * numbersOfResult.unknown / results.length)}% | $
     // const emailMessage = cinerino.factory.creativeWork.message.email.create({
     //     identifier: 'identifier',
     //     sender: {
-    //         name: 'SSKTS Report',
+    //         name: 'Cinerino Report',
     //         email: 'noreply@example.com'
     //     },
     //     toRecipient: {

@@ -1,9 +1,10 @@
 "use strict";
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
         function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
         function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : new P(function (resolve) { resolve(result.value); }).then(fulfilled, rejected); }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
@@ -24,20 +25,21 @@ const TIME_UNIT = 'seconds';
 function aggregateOfferAvailableHoursRateByScreen(theaterCode, screenBranchCode) {
     return __awaiter(this, void 0, void 0, function* () {
         // ここ1ヵ月の座席に対する上映イベントリストを取得
-        const placeRepo = new cinerino.repository.Place(mongoose.connection);
+        const masterService = new cinerino.COA.service.Master({
+            endpoint: process.env.COA_ENDPOINT,
+            auth: new cinerino.COA.auth.RefreshToken({
+                endpoint: process.env.COA_ENDPOINT,
+                refreshToken: process.env.COA_REFRESH_TOKEN
+            })
+        });
         const eventRepo = new cinerino.repository.Event(mongoose.connection);
         const orderRepo = new cinerino.repository.Order(mongoose.connection);
-        const movieTheater = yield placeRepo.findMovieTheaterByBranchCode(theaterCode);
-        const screeningRoom = movieTheater.containsPlace.find((p) => p.branchCode === screenBranchCode);
+        const screenResult = yield masterService.screen({ theaterCode: theaterCode });
+        const screeningRoom = screenResult.find((p) => p.screenCode === screenBranchCode);
         if (screeningRoom === undefined) {
             throw new Error('screeningRoom not found.');
         }
-        const screeningRoomSections = screeningRoom.containsPlace;
-        if (screeningRoomSections === undefined) {
-            throw new Error('screeningRoomSection not found.');
-        }
-        const screeningRoomSection = screeningRoomSections[0];
-        const seats = screeningRoomSection.containsPlace;
+        const seats = screeningRoom.listSeat;
         if (seats === undefined) {
             throw new Error('seats not found.');
         }
@@ -51,13 +53,13 @@ function aggregateOfferAvailableHoursRateByScreen(theaterCode, screenBranchCode)
             },
             'location.branchCode': screenBranchCode,
             'superEvent.location.branchCode': theaterCode
-        }, 'identifier name startDate coaInfo.rsvStartDate')
+        }, 'name startDate coaInfo.rsvStartDate')
             .exec()
             .then((docs) => docs
             .map((doc) => doc.toObject())
             .map((e) => {
             return {
-                identifier: e.identifier,
+                id: e.id,
                 startDate: e.startDate,
                 reserveStartDate: moment(`${e.coaInfo.rsvStartDate} 00:00:00+09:00`, 'YYYYMMDD HH:mm:ssZ')
                     .toDate(),
@@ -67,16 +69,16 @@ function aggregateOfferAvailableHoursRateByScreen(theaterCode, screenBranchCode)
         }));
         debug(events.length, 'events found.');
         // イベントに対する注文を取得
-        const orders = yield orderRepo.orderModel.find({ 'acceptedOffers.itemOffered.reservationFor.identifier': { $in: events.map((e) => e.identifier) } }, 'acceptedOffers orderDate')
+        const orders = yield orderRepo.orderModel.find({ 'acceptedOffers.itemOffered.reservationFor.id': { $in: events.map((e) => e.id) } }, 'acceptedOffers orderDate')
             .exec()
             .then((docs) => docs.map((doc) => doc.toObject()));
         debug(orders.length, 'orders found.');
         // 最初の注文をイベントごとに取り出す
         events = events.map((e) => {
             const ordersOnEvent = orders
-                .filter((o) => o.acceptedOffers[0].itemOffered.reservationFor.identifier === e.identifier)
+                .filter((o) => o.acceptedOffers[0].itemOffered.reservationFor.id === e.id)
                 .sort((a, b) => (a.orderDate < b.orderDate) ? -1 : 1);
-            return Object.assign({}, e, { 
+            return Object.assign(Object.assign({}, e), { 
                 // tslint:disable-next-line:no-null-keyword
                 firstOrderDate: (ordersOnEvent.length > 0) ? ordersOnEvent[0].orderDate : null });
         });
@@ -90,8 +92,8 @@ function aggregateOfferAvailableHoursRateByScreen(theaterCode, screenBranchCode)
             // 空席時間sum
             const availableHours = events.reduce((a, b) => {
                 const order = orders.find((o) => {
-                    return o.acceptedOffers[0].itemOffered.reservationFor.identifier === b.identifier
-                        && o.acceptedOffers[0].itemOffered.reservedTicket.ticketedSeat.seatNumber === seat.branchCode;
+                    return o.acceptedOffers[0].itemOffered.reservationFor.id === b.id
+                        && o.acceptedOffers[0].itemOffered.reservedTicket.ticketedSeat.seatNumber === seat.seatNum;
                 });
                 if (order === undefined) {
                     return a + moment(b.startDate)
@@ -104,7 +106,7 @@ function aggregateOfferAvailableHoursRateByScreen(theaterCode, screenBranchCode)
                 }
             }, 0);
             return {
-                seatNumber: seat.branchCode,
+                seatNumber: seat.seatNum,
                 offeredHours: offeredHours,
                 availableHours: availableHours,
                 // tslint:disable-next-line:no-magic-numbers
@@ -112,16 +114,33 @@ function aggregateOfferAvailableHoursRateByScreen(theaterCode, screenBranchCode)
             };
         });
         debug(aggregations);
-        const path = `${__dirname}/output/aggregations-${theaterCode}-${screenBranchCode}.json`;
+        const path = `${__dirname}/../../../../output/aggregations-${theaterCode}-${screenBranchCode}.json`;
         // tslint:disable-next-line:non-literal-fs-path no-null-keyword
         fs.writeFileSync(path, JSON.stringify(aggregations, null, '    '));
     });
 }
 exports.aggregateOfferAvailableHoursRateByScreen = aggregateOfferAvailableHoursRateByScreen;
-const screenBranchCodes = ['21', '22', '23', '24', '25', '26', '31', '34', '35'];
-const promises = screenBranchCodes.map((screenBranchCode) => __awaiter(this, void 0, void 0, function* () {
+const screenBranchCodes = [
+    '10',
+    '100',
+    '110',
+    '120',
+    '121',
+    '122',
+    '123',
+    '20',
+    '30',
+    '40',
+    '41',
+    '50',
+    '60',
+    '70',
+    '80',
+    '90'
+];
+const promises = screenBranchCodes.map((screenBranchCode) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        yield aggregateOfferAvailableHoursRateByScreen('001', screenBranchCode);
+        yield aggregateOfferAvailableHoursRateByScreen('120', screenBranchCode);
     }
     catch (error) {
         // tslint:disable-next-line:no-console
@@ -141,7 +160,7 @@ Promise.all(promises)
     console.error(err);
     process.exit(1);
 })
-    .then(() => __awaiter(this, void 0, void 0, function* () {
+    .then(() => __awaiter(void 0, void 0, void 0, function* () {
     yield mongoose.disconnect();
 }))
     .catch((err) => {

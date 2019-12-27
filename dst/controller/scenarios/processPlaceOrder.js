@@ -1,9 +1,10 @@
 "use strict";
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
         function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
         function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : new P(function (resolve) { resolve(result.value); }).then(fulfilled, rejected); }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
@@ -13,28 +14,32 @@ Object.defineProperty(exports, "__esModule", { value: true });
  * 注文取引シナリオ
  */
 const cinerino = require("@cinerino/domain");
-const ssktsapi = require("@motionpicture/sskts-api-nodejs-client");
+const cinerinoapi = require("@cinerino/api-nodejs-client");
 const createDebug = require("debug");
 const moment = require("moment");
 const util = require("util");
 const debug = createDebug('cinerino-monitoring');
-const auth = new ssktsapi.auth.ClientCredentials({
-    domain: process.env.SSKTS_AUTHORIZE_SERVER_DOMAIN,
-    clientId: process.env.SSKTS_CLIENT_ID,
-    clientSecret: process.env.SSKTS_CLIENT_SECRET,
+const auth = new cinerinoapi.auth.ClientCredentials({
+    domain: process.env.API_AUTHORIZE_SERVER_DOMAIN,
+    clientId: process.env.API_CLIENT_ID,
+    clientSecret: process.env.API_CLIENT_SECRET,
     scopes: [],
     state: 'teststate'
 });
-const events = new ssktsapi.service.Event({
-    endpoint: process.env.SSKTS_ENDPOINT,
+const events = new cinerinoapi.service.Event({
+    endpoint: process.env.API_ENDPOINT,
     auth: auth
 });
-const sellers = new ssktsapi.service.Seller({
-    endpoint: process.env.SSKTS_ENDPOINT,
+const sellers = new cinerinoapi.service.Seller({
+    endpoint: process.env.API_ENDPOINT,
     auth: auth
 });
-const placeOrderTransactions = new ssktsapi.service.txn.PlaceOrder({
-    endpoint: process.env.SSKTS_ENDPOINT,
+const placeOrderService = new cinerinoapi.service.txn.PlaceOrder4sskts({
+    endpoint: process.env.API_ENDPOINT,
+    auth: auth
+});
+const paymentService = new cinerinoapi.service.Payment({
+    endpoint: process.env.API_ENDPOINT,
     auth: auth
 });
 // tslint:disable-next-line:max-func-body-length
@@ -43,21 +48,20 @@ function main(theaterCode, durationInMillisecond) {
         // 取引の進捗状況
         let progress = '';
         try {
-            // search movie theater organizations
             const searchSellersResult = yield sellers.search({
                 location: { branchCodes: [theaterCode] }
             });
-            const movieTheaterOrganization = searchSellersResult.data.shift();
-            if (movieTheaterOrganization === undefined) {
-                throw new Error('movie theater shop not open');
+            const seller = searchSellersResult.data.shift();
+            if (seller === undefined) {
+                throw new Error('seller not found');
             }
-            progress = `movie theater found. ${movieTheaterOrganization.id}`;
+            progress = `seller found. ${seller.id}`;
             debug(progress);
             // search screening events
             progress = 'searching events...';
             debug(progress);
-            const searchEventsResult = yield events.searchScreeningEvents({
-                typeOf: ssktsapi.factory.chevre.eventType.ScreeningEvent,
+            const searchEventsResult = yield events.search({
+                typeOf: cinerinoapi.factory.chevre.eventType.ScreeningEvent,
                 superEvent: { locationBranchCodes: [theaterCode] },
                 startFrom: moment()
                     .toDate(),
@@ -78,7 +82,7 @@ function main(theaterCode, durationInMillisecond) {
             yield wait(Math.floor(durationInMillisecond / 6));
             const availableEvent = availableEvents[Math.floor(availableEvents.length * Math.random())];
             // retrieve an event detail
-            const screeningEvent = yield events.findScreeningEventById(availableEvent);
+            const screeningEvent = yield events.findById({ id: availableEvent.id });
             if (screeningEvent === null) {
                 throw new Error('Specified screening event not found');
             }
@@ -86,7 +90,7 @@ function main(theaterCode, durationInMillisecond) {
             // start a transaction
             progress = 'starting a transaction...';
             debug(progress);
-            const transaction = yield placeOrderTransactions.start({
+            const transaction = yield placeOrderService.start({
                 expires: moment()
                     // tslint:disable-next-line:no-magic-numbers
                     .add(durationInMillisecond + 120000, 'milliseconds')
@@ -97,8 +101,8 @@ function main(theaterCode, durationInMillisecond) {
                     ]
                 },
                 seller: {
-                    typeOf: ssktsapi.factory.organizationType.MovieTheater,
-                    id: movieTheaterOrganization.id
+                    typeOf: cinerinoapi.factory.organizationType.MovieTheater,
+                    id: seller.id
                 }
                 // sellerId: movieTheaterOrganization.id
             });
@@ -106,12 +110,19 @@ function main(theaterCode, durationInMillisecond) {
             debug(progress);
             // search sales tickets from cinerino.COA
             // このサンプルは1座席購入なので、制限単位が1枚以上の券種に絞る
-            const salesTicketResult = yield cinerino.COA.services.reserve.salesTicket(Object.assign({}, coaInfo, { flgMember: cinerino.COA.services.reserve.FlgMember.NonMember }))
+            const reserveService = new cinerino.COA.service.Reserve({
+                endpoint: process.env.COA_ENDPOINT,
+                auth: new cinerino.COA.auth.RefreshToken({
+                    endpoint: process.env.COA_ENDPOINT,
+                    refreshToken: process.env.COA_REFRESH_TOKEN
+                })
+            });
+            const salesTicketResult = yield reserveService.salesTicket(Object.assign(Object.assign({}, coaInfo), { flgMember: cinerino.COA.factory.reserve.FlgMember.NonMember }))
                 .then((results) => results.filter((result) => result.limitUnit === '001' && result.limitCount === 1));
             progress = `${salesTicketResult.length} sales ticket found.`;
             debug(progress);
             // search available seats from cinerino.COA
-            const getStateReserveSeatResult = yield cinerino.COA.services.reserve.stateReserveSeat(coaInfo);
+            const getStateReserveSeatResult = yield reserveService.stateReserveSeat(coaInfo);
             progress = `${getStateReserveSeatResult.cntReserveFree} seats available.`;
             debug(progress);
             const sectionCode = getStateReserveSeatResult.listSeat[0].seatSection;
@@ -128,27 +139,29 @@ function main(theaterCode, durationInMillisecond) {
             let selectedSalesTicket = salesTicketResult[Math.floor(salesTicketResult.length * Math.random())];
             progress = 'authorizing seat reservation...';
             debug(progress);
-            let seatReservationAuthorization = yield placeOrderTransactions.createSeatReservationAuthorization({
-                transactionId: transaction.id,
-                eventIdentifier: screeningEvent.identifier,
-                offers: [
-                    {
-                        seatSection: sectionCode,
-                        seatNumber: selectedSeatCode,
-                        ticketInfo: {
-                            ticketCode: selectedSalesTicket.ticketCode,
-                            mvtkAppPrice: 0,
-                            ticketCount: 1,
-                            addGlasses: selectedSalesTicket.addGlasses,
-                            kbnEisyahousiki: '00',
-                            mvtkNum: '',
-                            mvtkKbnDenshiken: '00',
-                            mvtkKbnMaeuriken: '00',
-                            mvtkKbnKensyu: '00',
-                            mvtkSalesPrice: 0
+            let seatReservationAuthorization = yield placeOrderService.createSeatReservationAuthorization({
+                purpose: { typeOf: transaction.typeOf, id: transaction.id },
+                object: {
+                    event: { id: screeningEvent.id },
+                    acceptedOffer: [
+                        {
+                            seatSection: sectionCode,
+                            seatNumber: selectedSeatCode,
+                            ticketInfo: {
+                                ticketCode: selectedSalesTicket.ticketCode,
+                                mvtkAppPrice: 0,
+                                ticketCount: 1,
+                                addGlasses: selectedSalesTicket.addGlasses,
+                                kbnEisyahousiki: '00',
+                                mvtkNum: '',
+                                mvtkKbnDenshiken: '00',
+                                mvtkKbnMaeuriken: '00',
+                                mvtkKbnKensyu: '00',
+                                mvtkSalesPrice: 0
+                            }
                         }
-                    }
-                ]
+                    ]
+                }
             });
             progress = `seat reservation authorized. ${seatReservationAuthorization.id}`;
             debug(progress);
@@ -157,33 +170,35 @@ function main(theaterCode, durationInMillisecond) {
             yield wait(Math.floor(durationInMillisecond / 6));
             progress = 'canceling seat reservation authorization...';
             debug(progress);
-            yield placeOrderTransactions.cancelSeatReservationAuthorization({
-                transactionId: transaction.id,
-                actionId: seatReservationAuthorization.id
+            yield placeOrderService.cancelSeatReservationAuthorization({
+                purpose: { typeOf: transaction.typeOf, id: transaction.id },
+                id: seatReservationAuthorization.id
             });
             progress = 'reauthorizaing seat reservation...';
             debug(progress);
-            seatReservationAuthorization = yield placeOrderTransactions.createSeatReservationAuthorization({
-                transactionId: transaction.id,
-                eventIdentifier: screeningEvent.identifier,
-                offers: [
-                    {
-                        seatSection: sectionCode,
-                        seatNumber: selectedSeatCode,
-                        ticketInfo: {
-                            ticketCode: selectedSalesTicket.ticketCode,
-                            mvtkAppPrice: 0,
-                            ticketCount: 1,
-                            addGlasses: selectedSalesTicket.addGlasses,
-                            kbnEisyahousiki: '00',
-                            mvtkNum: '',
-                            mvtkKbnDenshiken: '00',
-                            mvtkKbnMaeuriken: '00',
-                            mvtkKbnKensyu: '00',
-                            mvtkSalesPrice: 0
+            seatReservationAuthorization = yield placeOrderService.createSeatReservationAuthorization({
+                purpose: { typeOf: transaction.typeOf, id: transaction.id },
+                object: {
+                    event: { id: screeningEvent.id },
+                    acceptedOffer: [
+                        {
+                            seatSection: sectionCode,
+                            seatNumber: selectedSeatCode,
+                            ticketInfo: {
+                                ticketCode: selectedSalesTicket.ticketCode,
+                                mvtkAppPrice: 0,
+                                ticketCount: 1,
+                                addGlasses: selectedSalesTicket.addGlasses,
+                                kbnEisyahousiki: '00',
+                                mvtkNum: '',
+                                mvtkKbnDenshiken: '00',
+                                mvtkKbnMaeuriken: '00',
+                                mvtkKbnKensyu: '00',
+                                mvtkSalesPrice: 0
+                            }
                         }
-                    }
-                ]
+                    ]
+                }
             });
             progress = `seat reservation authorized. ${seatReservationAuthorization.id}`;
             debug(progress);
@@ -194,28 +209,30 @@ function main(theaterCode, durationInMillisecond) {
             debug(progress);
             // select a ticket randomly
             selectedSalesTicket = salesTicketResult[Math.floor(salesTicketResult.length * Math.random())];
-            seatReservationAuthorization = yield placeOrderTransactions.changeSeatReservationOffers({
-                transactionId: transaction.id,
-                actionId: seatReservationAuthorization.id,
-                eventIdentifier: screeningEvent.identifier,
-                offers: [
-                    {
-                        seatSection: sectionCode,
-                        seatNumber: selectedSeatCode,
-                        ticketInfo: {
-                            ticketCode: selectedSalesTicket.ticketCode,
-                            mvtkAppPrice: 0,
-                            ticketCount: 1,
-                            addGlasses: selectedSalesTicket.addGlasses,
-                            kbnEisyahousiki: '00',
-                            mvtkNum: '',
-                            mvtkKbnDenshiken: '00',
-                            mvtkKbnMaeuriken: '00',
-                            mvtkKbnKensyu: '00',
-                            mvtkSalesPrice: 0
+            seatReservationAuthorization = yield placeOrderService.changeSeatReservationOffers({
+                purpose: { typeOf: transaction.typeOf, id: transaction.id },
+                id: seatReservationAuthorization.id,
+                object: {
+                    event: { id: screeningEvent.id },
+                    acceptedOffer: [
+                        {
+                            seatSection: sectionCode,
+                            seatNumber: selectedSeatCode,
+                            ticketInfo: {
+                                ticketCode: selectedSalesTicket.ticketCode,
+                                mvtkAppPrice: 0,
+                                ticketCount: 1,
+                                addGlasses: selectedSalesTicket.addGlasses,
+                                kbnEisyahousiki: '00',
+                                mvtkNum: '',
+                                mvtkKbnDenshiken: '00',
+                                mvtkKbnMaeuriken: '00',
+                                mvtkKbnKensyu: '00',
+                                mvtkSalesPrice: 0
+                            }
                         }
-                    }
-                ]
+                    ]
+                }
             });
             progress = `sales ticket changed. ${seatReservationAuthorization.id}`;
             debug(progress);
@@ -237,28 +254,26 @@ function main(theaterCode, durationInMillisecond) {
             // 購入者情報入力時間
             // tslint:disable-next-line:no-magic-numbers
             yield wait(Math.floor(durationInMillisecond / 6));
-            progress = 'setting customer contact...';
+            progress = 'setting customer profile...';
             debug(progress);
-            const contact = {
+            const profile = {
                 givenName: 'たろう',
                 familyName: 'もーしょん',
                 telephone: '09012345678',
                 email: process.env.DEVELOPER_EMAIL
             };
-            yield placeOrderTransactions.setCustomerContact({
+            yield placeOrderService.setProfile({
                 id: transaction.id,
-                object: {
-                    customerContact: contact
-                }
+                agent: profile
             });
-            progress = 'customer contact set.';
+            progress = 'customer profile set.';
             debug(progress);
             // 購入情報確認時間
             // tslint:disable-next-line:no-magic-numbers
             yield wait(Math.floor(durationInMillisecond / 6));
             progress = 'confirming a transaction...';
             debug(progress);
-            const order = yield placeOrderTransactions.confirm({
+            const { order } = yield placeOrderService.confirm({
                 id: transaction.id
             });
             progress = `transaction confirmed. ${order.orderNumber}`;
@@ -285,10 +300,10 @@ function authorieCreditCardUntilSuccess(transactionId, orderIdPrefix, amount) {
             numberOfTryAuthorizeCreditCard += 1;
             yield wait(RETRY_INTERVAL_IN_MILLISECONDS);
             try {
-                creditCardAuthorization = yield placeOrderTransactions.authorizeCreditCardPayment({
-                    purpose: { typeOf: ssktsapi.factory.transactionType.PlaceOrder, id: transactionId },
+                creditCardAuthorization = yield paymentService.authorizeCreditCard({
+                    purpose: { typeOf: cinerinoapi.factory.transactionType.PlaceOrder, id: transactionId },
                     object: {
-                        typeOf: ssktsapi.factory.paymentMethodType.CreditCard,
+                        typeOf: cinerinoapi.factory.paymentMethodType.CreditCard,
                         // 試行毎にオーダーIDを変更
                         // tslint:disable-next-line:no-magic-numbers
                         orderId: `${orderIdPrefix}${`00${numberOfTryAuthorizeCreditCard.toString()}`.slice(-2)}`,

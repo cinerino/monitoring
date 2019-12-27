@@ -1,9 +1,10 @@
 "use strict";
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
         function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
         function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : new P(function (resolve) { resolve(result.value); }).then(fulfilled, rejected); }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
@@ -85,7 +86,7 @@ function reportNumberOfTrialsOfTasks(telemetries, measuredFrom, measuredThrough)
             .map((k) => cinerino.factory.taskName[k]);
         yield Promise.all(targetTaskNames.map((taskName) => __awaiter(this, void 0, void 0, function* () {
             const xLabels = createXLabels(measuredFrom, measuredThrough);
-            const params = Object.assign({}, defaultParams, {
+            const params = Object.assign(Object.assign({}, defaultParams), {
                 chco: '79F67D,79CCF5,E96C6C',
                 chxt: 'x,y,y',
                 chd: 't:',
@@ -136,7 +137,7 @@ function reportLatenciesOfTasks(telemetries, measuredFrom, measuredThrough) {
             .map((k) => cinerino.factory.taskName[k]);
         yield Promise.all(targetTaskNames.map((taskName) => __awaiter(this, void 0, void 0, function* () {
             const xLabels = createXLabels(measuredFrom, measuredThrough);
-            const params = Object.assign({}, defaultParams, {
+            const params = Object.assign(Object.assign({}, defaultParams), {
                 chco: '79F67D,79CCF5,E96C6C',
                 chxt: 'x,y,y',
                 chd: 't:',
@@ -184,7 +185,7 @@ function reportLatenciesOfTasks(telemetries, measuredFrom, measuredThrough) {
 function reportNumberOfTransactionsByStatuses(sellerName, telemetries, measuredFrom, measuredThrough) {
     return __awaiter(this, void 0, void 0, function* () {
         const xLabels = createXLabels(measuredFrom, measuredThrough);
-        const params = Object.assign({}, defaultParams, {
+        const params = Object.assign(Object.assign({}, defaultParams), {
             chco: '79F67D,79CCF5,E96C6C',
             chxt: 'x,y',
             chd: 't:',
@@ -226,7 +227,7 @@ function reportExpiredRatio(sellerName, telemetries, measuredFrom, measuredThrou
             }
         });
         const xLabels = createXLabels(measuredFrom, measuredThrough);
-        const params = Object.assign({}, defaultParams, {
+        const params = Object.assign(Object.assign({}, defaultParams), {
             chco: '79CCF5,E96C6C',
             chxt: 'x,y',
             chd: 't:',
@@ -249,7 +250,7 @@ function reportExpiredRatio(sellerName, telemetries, measuredFrom, measuredThrou
 function reportTimeLeftUntilEvent(sellerName, telemetries, measuredFrom, measuredThrough) {
     return __awaiter(this, void 0, void 0, function* () {
         const xLabels = createXLabels(measuredFrom, measuredThrough);
-        const params = Object.assign({}, defaultParams, {
+        const params = Object.assign(Object.assign({}, defaultParams), {
             chco: 'E96C6C,79CCF5,79F67D',
             chxt: 'x,y,y',
             chd: 't:',
@@ -277,7 +278,7 @@ function reportTimeLeftUntilEvent(sellerName, telemetries, measuredFrom, measure
 function reportTransactionRequiredTimes(sellerName, telemetries, measuredFrom, measuredThrough) {
     return __awaiter(this, void 0, void 0, function* () {
         const xLabels = createXLabels(measuredFrom, measuredThrough);
-        const params = Object.assign({}, defaultParams, {
+        const params = Object.assign(Object.assign({}, defaultParams), {
             chco: 'DAA8F5',
             chxt: 'x,y',
             chd: 't:',
@@ -299,7 +300,7 @@ function reportTransactionRequiredTimes(sellerName, telemetries, measuredFrom, m
 function reportTransactionAmounts(sellerName, telemetries, measuredFrom, measuredThrough) {
     return __awaiter(this, void 0, void 0, function* () {
         const xLabels = createXLabels(measuredFrom, measuredThrough);
-        const params = Object.assign({}, defaultParams, {
+        const params = Object.assign(Object.assign({}, defaultParams), {
             chco: 'DAA8F5',
             chxt: 'x,y',
             chd: 't:',
@@ -320,7 +321,7 @@ function reportTransactionAmounts(sellerName, telemetries, measuredFrom, measure
 function reportTransactionActions(sellerName, telemetries, measuredFrom, measuredThrough) {
     return __awaiter(this, void 0, void 0, function* () {
         const xLabels = createXLabels(measuredFrom, measuredThrough);
-        const params = Object.assign({}, defaultParams, {
+        const params = Object.assign(Object.assign({}, defaultParams), {
             chco: '79CCF5,E96C6C',
             chxt: 'x,y',
             chd: 't:',
@@ -341,7 +342,8 @@ function createXLabels(measuredFrom, measuredThrough) {
     const diff = moment(measuredThrough)
         .diff(moment(measuredFrom), 'hours');
     const numberOfLabels = 6;
-    return Array.from(Array(numberOfLabels + 1))
+    // tslint:disable-next-line:prefer-array-literal
+    return [...Array(numberOfLabels + 1)]
         .map((__, index) => {
         return moment(measuredFrom)
             .add(diff / numberOfLabels * index, 'hours')
