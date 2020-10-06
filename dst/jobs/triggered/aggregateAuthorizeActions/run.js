@@ -21,13 +21,14 @@ const request = require("request-promise-native");
 const mongooseConnectionOptions_1 = require("../../../mongooseConnectionOptions");
 const debug = createDebug('cinerino-monitoring');
 const SUBJECT = 'Authorize action aggregation';
-const BACKLOG_ISSUE_KEY = 'SSKTS-1179';
+const BACKLOG_ISSUE_KEY = 'CINERINO-572';
 // tslint:disable-next-line:max-func-body-length
 function main() {
     return __awaiter(this, void 0, void 0, function* () {
         const actionRepo = new cinerino.repository.Action(mongoose.connection);
         const targetObjectTypes = [
-            ...Object.values(cinerino.factory.paymentMethodType),
+            cinerino.factory.chevre.offerType.Offer,
+            cinerino.factory.action.authorize.paymentMethod.any.ResultType.Payment,
             cinerino.factory.action.authorize.offer.seatReservation.ObjectType.SeatReservation
         ];
         const startThrough = moment()
@@ -95,7 +96,7 @@ ${results.map((r) => `${r.objectType} | ${r.count} | ${r.total} | ${r.max} | ${r
         // return;
         // backlogへ通知
         const users = yield request.get({
-            url: 'https://m-p.backlog.jp/api/v2/projects/SSKTS/users',
+            url: 'https://m-p.backlog.jp/api/v2/projects/CINERINO/users',
             json: true,
             qs: { apiKey: process.env.BACKLOG_API_KEY }
         })

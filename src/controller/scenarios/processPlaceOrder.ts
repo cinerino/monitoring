@@ -19,7 +19,7 @@ const auth = new cinerinoapi.auth.ClientCredentials({
     state: 'teststate'
 });
 
-const events = new cinerinoapi.service.Event({
+const eventService = new cinerinoapi.service.Event({
     endpoint: <string>process.env.API_ENDPOINT,
     auth: auth
 });
@@ -55,7 +55,7 @@ export async function main(theaterCode: string, durationInMillisecond: number) {
         // search screening events
         progress = 'searching events...';
         debug(progress);
-        const searchEventsResult = await events.search({
+        const searchEventsResult = await eventService.search({
             typeOf: cinerinoapi.factory.chevre.eventType.ScreeningEvent,
             superEvent: { locationBranchCodes: [theaterCode] },
             startFrom: moment()
@@ -83,12 +83,10 @@ export async function main(theaterCode: string, durationInMillisecond: number) {
         const availableEvent = availableEvents[Math.floor(availableEvents.length * Math.random())];
 
         // retrieve an event detail
-
-        const screeningEvent = await events.findById({ id: availableEvent.id });
+        const screeningEvent = await eventService.findById({ id: availableEvent.id });
         if (screeningEvent === null) {
             throw new Error('Specified screening event not found');
         }
-        const coaInfo = <cinerinoapi.factory.event.screeningEvent.ICOAInfo>screeningEvent.coaInfo;
 
         // start a transaction
         progress = 'starting a transaction...';
@@ -107,35 +105,41 @@ export async function main(theaterCode: string, durationInMillisecond: number) {
                 typeOf: cinerinoapi.factory.organizationType.MovieTheater,
                 id: seller.id
             }
-            // sellerId: movieTheaterOrganization.id
         });
         progress = `transaction started. ${transaction.id}`;
         debug(progress);
 
         // search sales tickets from cinerino.COA
         // このサンプルは1座席購入なので、制限単位が1枚以上の券種に絞る
-        const reserveService = new cinerino.COA.service.Reserve({
-            endpoint: <string>process.env.COA_ENDPOINT,
-            auth: new cinerino.COA.auth.RefreshToken({
-                endpoint: <string>process.env.COA_ENDPOINT,
-                refreshToken: <string>process.env.COA_REFRESH_TOKEN
-            })
-        });
-        const salesTicketResult = await reserveService.salesTicket({
-            ...coaInfo,
-            flgMember: cinerino.COA.factory.reserve.FlgMember.NonMember
+        const salesTicketResult = await eventService.searchTicketOffers4COA({
+            event: { id: screeningEvent.id },
+            seller: { typeOf: seller.typeOf, id: seller.id },
+            store: { id: <string>process.env.API_CLIENT_ID }
         })
-            .then((results) => results.filter((result) => result.limitUnit === '001' && result.limitCount === 1));
+            .then((results) => results.filter((result) => {
+                return result.limitUnit === '001'
+                    && result.limitCount === 1
+                    && result.flgMember === '0'
+                    && !result.flgMvtk;
+            }));
         progress = `${salesTicketResult.length} sales ticket found.`;
         debug(progress);
 
         // search available seats from cinerino.COA
-        const getStateReserveSeatResult = await reserveService.stateReserveSeat(coaInfo);
-        progress = `${getStateReserveSeatResult.cntReserveFree} seats available.`;
+        const screeningRoomSectionOffer = await eventService.searchOffers({
+            event: { id: screeningEvent.id }
+        });
+        progress = `${screeningRoomSectionOffer.length} sections available.`;
         debug(progress);
-        const sectionCode = getStateReserveSeatResult.listSeat[0].seatSection;
-        const freeSeatCodes = getStateReserveSeatResult.listSeat[0].listFreeSeat.map((freeSeat) => freeSeat.seatNum);
-        if (getStateReserveSeatResult.cntReserveFree <= 0) {
+        const sectionCode = screeningRoomSectionOffer[0].branchCode;
+        const availableSeatNumbers = screeningRoomSectionOffer[0].containsPlace
+            .filter((seat) => {
+                return Array.isArray(seat.offers)
+                    && seat.offers.length > 0
+                    && seat.offers[0].availability === cinerinoapi.factory.chevre.itemAvailability.InStock;
+            })
+            .map((seat) => seat.branchCode);
+        if (availableSeatNumbers.length <= 0) {
             throw new Error('No available seats');
         }
 
@@ -144,7 +148,7 @@ export async function main(theaterCode: string, durationInMillisecond: number) {
         await wait(Math.floor(durationInMillisecond / 6));
 
         // select a seat randomly
-        const selectedSeatCode = freeSeatCodes[Math.floor(freeSeatCodes.length * Math.random())];
+        const selectedSeatCode = availableSeatNumbers[Math.floor(availableSeatNumbers.length * Math.random())];
 
         // select a ticket randomly
         let selectedSalesTicket = salesTicketResult[Math.floor(salesTicketResult.length * Math.random())];
@@ -161,15 +165,16 @@ export async function main(theaterCode: string, durationInMillisecond: number) {
                         seatNumber: selectedSeatCode,
                         ticketInfo: {
                             ticketCode: selectedSalesTicket.ticketCode,
-                            mvtkAppPrice: 0,
+                            mvtkAppPrice: selectedSalesTicket.mvtkAppPrice,
                             ticketCount: 1,
                             addGlasses: selectedSalesTicket.addGlasses,
-                            kbnEisyahousiki: '00',
+                            kbnEisyahousiki: selectedSalesTicket.kbnEisyahousiki,
                             mvtkNum: '',
-                            mvtkKbnDenshiken: '00',
-                            mvtkKbnMaeuriken: '00',
-                            mvtkKbnKensyu: '00',
-                            mvtkSalesPrice: 0
+                            mvtkKbnDenshiken: selectedSalesTicket.mvtkKbnDenshiken,
+                            mvtkKbnMaeuriken: selectedSalesTicket.mvtkKbnMaeuriken,
+                            mvtkKbnKensyu: selectedSalesTicket.mvtkKbnKensyu,
+                            mvtkSalesPrice: selectedSalesTicket.mvtkSalesPrice,
+                            usePoint: selectedSalesTicket.usePoint
                         }
                     }
                 ]
@@ -204,12 +209,13 @@ export async function main(theaterCode: string, durationInMillisecond: number) {
                             mvtkAppPrice: 0,
                             ticketCount: 1,
                             addGlasses: selectedSalesTicket.addGlasses,
-                            kbnEisyahousiki: '00',
+                            kbnEisyahousiki: selectedSalesTicket.kbnEisyahousiki,
                             mvtkNum: '',
-                            mvtkKbnDenshiken: '00',
-                            mvtkKbnMaeuriken: '00',
-                            mvtkKbnKensyu: '00',
-                            mvtkSalesPrice: 0
+                            mvtkKbnDenshiken: selectedSalesTicket.mvtkKbnDenshiken,
+                            mvtkKbnMaeuriken: selectedSalesTicket.mvtkKbnMaeuriken,
+                            mvtkKbnKensyu: selectedSalesTicket.mvtkKbnKensyu,
+                            mvtkSalesPrice: selectedSalesTicket.mvtkSalesPrice,
+                            usePoint: selectedSalesTicket.usePoint
                         }
                     }
                 ]
@@ -240,12 +246,13 @@ export async function main(theaterCode: string, durationInMillisecond: number) {
                             mvtkAppPrice: 0,
                             ticketCount: 1,
                             addGlasses: selectedSalesTicket.addGlasses,
-                            kbnEisyahousiki: '00',
+                            kbnEisyahousiki: selectedSalesTicket.kbnEisyahousiki,
                             mvtkNum: '',
-                            mvtkKbnDenshiken: '00',
-                            mvtkKbnMaeuriken: '00',
-                            mvtkKbnKensyu: '00',
-                            mvtkSalesPrice: 0
+                            mvtkKbnDenshiken: selectedSalesTicket.mvtkKbnDenshiken,
+                            mvtkKbnMaeuriken: selectedSalesTicket.mvtkKbnMaeuriken,
+                            mvtkKbnKensyu: selectedSalesTicket.mvtkKbnKensyu,
+                            mvtkSalesPrice: selectedSalesTicket.mvtkSalesPrice,
+                            usePoint: selectedSalesTicket.usePoint
                         }
                     }
                 ]
@@ -284,7 +291,7 @@ export async function main(theaterCode: string, durationInMillisecond: number) {
         const profile = {
             givenName: 'たろう',
             familyName: 'もーしょん',
-            telephone: '09012345678',
+            telephone: '+819012345678',
             email: <string>process.env.DEVELOPER_EMAIL
         };
         await placeOrderService.setProfile({

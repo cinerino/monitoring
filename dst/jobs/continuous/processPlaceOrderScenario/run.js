@@ -9,10 +9,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-/**
- * 注文シナリオをランダムに実行し続ける
- */
-const cinerino = require("@cinerino/domain");
 const createDebug = require("debug");
 const mongoose = require("mongoose");
 const processPlaceOrder = require("../../../controller/scenarios/processPlaceOrder");
@@ -28,8 +24,11 @@ mongoose.connect(process.env.MONGOLAB_URI, mongooseConnectionOptions_1.default)
     .then()
     // tslint:disable-next-line:no-console
     .catch(console.error);
-const sellerRepo = new cinerino.repository.Seller(mongoose.connection);
-sellerRepo.search({})
+// const sellerRepo = new cinerino.repository.Seller(mongoose.connection);
+// sellerRepo.search({})
+new Promise((resolve) => {
+    resolve([]);
+})
     .then((movieTheaters) => {
     movieTheaters.forEach((movieTheater) => {
         setInterval(() => {

@@ -8,8 +8,10 @@ async function main() {
         return request.get({
             url: `${project.api}/health`,
             simple: false,
-            resolveWithFullResponse: true
+            resolveWithFullResponse: true,
+            timeout: 10000
         }).then((response) => {
+            console.error(response.body);
             return {
                 ...project,
                 health: `${response.statusCode} ${response.body}`,
@@ -17,6 +19,7 @@ async function main() {
             };
         })
             .catch((err) => {
+                console.error(err);
                 return {
                     ...project,
                     health: err.message,

@@ -13,110 +13,122 @@ Object.defineProperty(exports, "__esModule", { value: true });
  * 座席予約の空席時間率を算出する
  * 実験的実装
  */
-const cinerino = require("@cinerino/domain");
+// import * as cinerino from '@cinerino/domain';
 const createDebug = require("debug");
-const fs = require("fs");
-const moment = require("moment");
+// import * as fs from 'fs';
+// import * as moment from 'moment';
 const mongoose = require("mongoose");
 const mongooseConnectionOptions_1 = require("../../../mongooseConnectionOptions");
 const debug = createDebug('cinerino-monitoring');
-const TIME_UNIT = 'seconds';
+// const TIME_UNIT: moment.unitOfTime.Diff = 'seconds';
 // tslint:disable-next-line:max-func-body-length
-function aggregateOfferAvailableHoursRateByScreen(theaterCode, screenBranchCode) {
+function aggregateOfferAvailableHoursRateByScreen(__, ___) {
     return __awaiter(this, void 0, void 0, function* () {
-        // ここ1ヵ月の座席に対する上映イベントリストを取得
-        const masterService = new cinerino.COA.service.Master({
-            endpoint: process.env.COA_ENDPOINT,
-            auth: new cinerino.COA.auth.RefreshToken({
-                endpoint: process.env.COA_ENDPOINT,
-                refreshToken: process.env.COA_REFRESH_TOKEN
-            })
-        });
-        const eventRepo = new cinerino.repository.Event(mongoose.connection);
-        const orderRepo = new cinerino.repository.Order(mongoose.connection);
-        const screenResult = yield masterService.screen({ theaterCode: theaterCode });
-        const screeningRoom = screenResult.find((p) => p.screenCode === screenBranchCode);
-        if (screeningRoom === undefined) {
-            throw new Error('screeningRoom not found.');
-        }
-        const seats = screeningRoom.listSeat;
-        if (seats === undefined) {
-            throw new Error('seats not found.');
-        }
-        let events = yield eventRepo.eventModel.find({
-            typeOf: cinerino.factory.chevre.eventType.ScreeningEvent,
-            startDate: {
-                $gte: moment()
-                    // tslint:disable-next-line:no-magic-numbers
-                    .add(-3, 'months')
-                    .toDate()
-            },
-            'location.branchCode': screenBranchCode,
-            'superEvent.location.branchCode': theaterCode
-        }, 'name startDate coaInfo.rsvStartDate')
-            .exec()
-            .then((docs) => docs
-            .map((doc) => doc.toObject())
-            .map((e) => {
-            return {
-                id: e.id,
-                startDate: e.startDate,
-                reserveStartDate: moment(`${e.coaInfo.rsvStartDate} 00:00:00+09:00`, 'YYYYMMDD HH:mm:ssZ')
-                    .toDate(),
-                // tslint:disable-next-line:no-null-keyword
-                firstOrderDate: null
-            };
-        }));
-        debug(events.length, 'events found.');
-        // イベントに対する注文を取得
-        const orders = yield orderRepo.orderModel.find({ 'acceptedOffers.itemOffered.reservationFor.id': { $in: events.map((e) => e.id) } }, 'acceptedOffers orderDate')
-            .exec()
-            .then((docs) => docs.map((doc) => doc.toObject()));
-        debug(orders.length, 'orders found.');
-        // 最初の注文をイベントごとに取り出す
-        events = events.map((e) => {
-            const ordersOnEvent = orders
-                .filter((o) => o.acceptedOffers[0].itemOffered.reservationFor.id === e.id)
-                .sort((a, b) => (a.orderDate < b.orderDate) ? -1 : 1);
-            return Object.assign(Object.assign({}, e), { 
-                // tslint:disable-next-line:no-null-keyword
-                firstOrderDate: (ordersOnEvent.length > 0) ? ordersOnEvent[0].orderDate : null });
-        });
-        // 注文がないイベントは集計から除外
-        events = events.filter((e) => e.firstOrderDate !== null);
-        const aggregations = seats.map((seat) => {
-            // 各上映イベントにおける、注文日時、予約開始日時、上映開始日時と比較する
-            // 供給時間sum
-            const offeredHours = events.reduce((a, b) => a + moment(b.startDate)
-                .diff(moment(b.firstOrderDate), TIME_UNIT), 0);
-            // 空席時間sum
-            const availableHours = events.reduce((a, b) => {
-                const order = orders.find((o) => {
-                    return o.acceptedOffers[0].itemOffered.reservationFor.id === b.id
-                        && o.acceptedOffers[0].itemOffered.reservedTicket.ticketedSeat.seatNumber === seat.seatNum;
-                });
-                if (order === undefined) {
-                    return a + moment(b.startDate)
-                        .diff(moment(b.firstOrderDate), TIME_UNIT);
-                }
-                else {
-                    // 注文が入っていれば、最初の予約から自分の予約までの時間
-                    return a + moment(order.orderDate)
-                        .diff(moment(b.firstOrderDate), TIME_UNIT);
-                }
-            }, 0);
-            return {
-                seatNumber: seat.seatNum,
-                offeredHours: offeredHours,
-                availableHours: availableHours,
-                // tslint:disable-next-line:no-magic-numbers
-                availableRate: Math.floor(availableHours * 100 / offeredHours)
-            };
-        });
-        debug(aggregations);
-        const path = `${__dirname}/../../../../output/aggregations-${theaterCode}-${screenBranchCode}.json`;
-        // tslint:disable-next-line:non-literal-fs-path no-null-keyword
-        fs.writeFileSync(path, JSON.stringify(aggregations, null, '    '));
+        // // ここ1ヵ月の座席に対する上映イベントリストを取得
+        // const masterService = new cinerino.COA.service.Master({
+        //     endpoint: <string>process.env.COA_ENDPOINT,
+        //     auth: new cinerino.COA.auth.RefreshToken({
+        //         endpoint: <string>process.env.COA_ENDPOINT,
+        //         refreshToken: <string>process.env.COA_REFRESH_TOKEN
+        //     })
+        // });
+        // const orderRepo = new cinerino.repository.Order(mongoose.connection);
+        // const screenResult = await masterService.screen({ theaterCode: theaterCode });
+        // const screeningRoom = screenResult.find((p) => p.screenCode === screenBranchCode);
+        // if (screeningRoom === undefined) {
+        //     throw new Error('screeningRoom not found.');
+        // }
+        // const seats = screeningRoom.listSeat;
+        // if (seats === undefined) {
+        //     throw new Error('seats not found.');
+        // }
+        // let events = await eventRepo.eventModel.find(
+        //     {
+        //         typeOf: cinerino.factory.chevre.eventType.ScreeningEvent,
+        //         startDate: {
+        //             $gte: moment()
+        //                 // tslint:disable-next-line:no-magic-numbers
+        //                 .add(-3, 'months')
+        //                 .toDate()
+        //         },
+        //         'location.branchCode': screenBranchCode,
+        //         'superEvent.location.branchCode': theaterCode
+        //     },
+        //     'name startDate coaInfo.rsvStartDate'
+        // )
+        //     .exec()
+        //     .then((docs) => docs
+        //         .map((doc) => doc.toObject())
+        //         .map((e) => {
+        //             return {
+        //                 id: <string>e.id,
+        //                 startDate: <Date>e.startDate,
+        //                 reserveStartDate: moment(`${e.coaInfo.rsvStartDate} 00:00:00+09:00`, 'YYYYMMDD HH:mm:ssZ')
+        //                     .toDate(),
+        //                 // tslint:disable-next-line:no-null-keyword
+        //                 firstOrderDate: <Date | null>null
+        //             };
+        //         }));
+        // debug(events.length, 'events found.');
+        // // イベントに対する注文を取得
+        // const orders = await orderRepo.orderModel.find(
+        //     { 'acceptedOffers.itemOffered.reservationFor.id': { $in: events.map((e) => e.id) } },
+        //     'acceptedOffers orderDate'
+        // )
+        //     .exec()
+        //     .then((docs) => docs.map((doc) => doc.toObject()));
+        // debug(orders.length, 'orders found.');
+        // // 最初の注文をイベントごとに取り出す
+        // events = events.map((e) => {
+        //     const ordersOnEvent = orders
+        //         .filter((o) => o.acceptedOffers[0].itemOffered.reservationFor.id === e.id)
+        //         .sort((a, b) => (a.orderDate < b.orderDate) ? -1 : 1);
+        //     return {
+        //         ...e,
+        //         // tslint:disable-next-line:no-null-keyword
+        //         firstOrderDate: (ordersOnEvent.length > 0) ? ordersOnEvent[0].orderDate : null
+        //     };
+        // });
+        // // 注文がないイベントは集計から除外
+        // events = events.filter((e) => e.firstOrderDate !== null);
+        // const aggregations = seats.map((seat) => {
+        //     // 各上映イベントにおける、注文日時、予約開始日時、上映開始日時と比較する
+        //     // 供給時間sum
+        //     const offeredHours = events.reduce(
+        //         (a, b) => a + moment(b.startDate)
+        //             .diff(moment(<Date>b.firstOrderDate), TIME_UNIT),
+        //         0
+        //     );
+        //     // 空席時間sum
+        //     const availableHours = events.reduce(
+        //         (a, b) => {
+        //             const order = orders.find((o) => {
+        //                 return o.acceptedOffers[0].itemOffered.reservationFor.id === b.id
+        //                     && o.acceptedOffers[0].itemOffered.reservedTicket.ticketedSeat.seatNumber === seat.seatNum;
+        //             });
+        //             if (order === undefined) {
+        //                 return a + moment(b.startDate)
+        //                     .diff(moment(<Date>b.firstOrderDate), TIME_UNIT);
+        //             } else {
+        //                 // 注文が入っていれば、最初の予約から自分の予約までの時間
+        //                 return a + moment(order.orderDate)
+        //                     .diff(moment(<Date>b.firstOrderDate), TIME_UNIT);
+        //             }
+        //         },
+        //         0
+        //     );
+        //     return {
+        //         seatNumber: seat.seatNum,
+        //         offeredHours: offeredHours,
+        //         availableHours: availableHours,
+        //         // tslint:disable-next-line:no-magic-numbers
+        //         availableRate: Math.floor(availableHours * 100 / offeredHours)
+        //     };
+        // });
+        // debug(aggregations);
+        // const path = `${__dirname}/../../../../output/aggregations-${theaterCode}-${screenBranchCode}.json`;
+        // // tslint:disable-next-line:non-literal-fs-path no-null-keyword
+        // fs.writeFileSync(path, JSON.stringify(aggregations, null, '    '));
     });
 }
 exports.aggregateOfferAvailableHoursRateByScreen = aggregateOfferAvailableHoursRateByScreen;

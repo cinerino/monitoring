@@ -56,7 +56,8 @@ export async function main() {
             $lt: aggregationStartThrough
         },
         typeOf: cinerino.factory.actionType.AuthorizeAction,
-        'object.typeOf': { $exists: true, $eq: cinerino.factory.paymentMethodType.CreditCard }
+        'object.typeOf': { $exists: true, $eq: cinerino.factory.action.authorize.paymentMethod.any.ResultType.Payment },
+        'object.paymentMethod': { $exists: true, $eq: cinerino.factory.chevre.paymentMethodType.CreditCard }
     })
         .cursor();
     debug('action(s) found.');
@@ -64,7 +65,7 @@ export async function main() {
     // tslint:disable-next-line:max-func-body-length
     await cursor.eachAsync(async (doc) => {
         sampleCount += 1;
-        const action = <cinerino.factory.action.authorize.paymentMethod.creditCard.IAction>doc.toObject();
+        const action = <cinerino.factory.action.authorize.paymentMethod.any.IAction>doc.toObject();
 
         // 失敗ステータスのアクションを検出
         // const failedActions = actions.filter((a) => a.actionStatus === cinerino.factory.actionStatusType.FailedActionStatus);
@@ -208,7 +209,7 @@ ${userMessagesSummary.map(
     // backlogへ通知
     const users = await request.get(
         {
-            url: 'https://m-p.backlog.jp/api/v2/projects/SSKTS/users',
+            url: 'https://m-p.backlog.jp/api/v2/projects/CINERINO/users',
             json: true,
             qs: { apiKey: process.env.BACKLOG_API_KEY }
         }
@@ -218,7 +219,7 @@ ${userMessagesSummary.map(
     debug('notifying', users.length, 'people on backlog...');
     await request.post(
         {
-            url: 'https://m-p.backlog.jp/api/v2/issues/SSKTS-857/comments',
+            url: 'https://m-p.backlog.jp/api/v2/issues/CINERINO-571/comments',
             form: {
                 content: text,
                 notifiedUserId: users.map((user) => user.id)

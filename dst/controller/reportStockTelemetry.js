@@ -44,9 +44,10 @@ function main() {
         const measuredFrom = moment(dateNowByUnitTime)
             .add(numberOfAggregationUnit * -telemetryUnitTimeInSeconds, 'seconds');
         debug('reporting telemetries measuredFrom - dateTo...', measuredFrom, dateNowByUnitTime);
-        const sellerRepo = new cinerino.repository.Seller(mongoose.connection);
+        // const sellerRepo = new cinerino.repository.Seller(mongoose.connection);
         const telemetryRepo = new cinerino.repository.Telemetry(mongoose.connection);
-        const movieTheaters = yield sellerRepo.search({});
+        // const movieTheaters = await sellerRepo.search({});
+        const movieTheaters = [];
         const globalTelemetries = yield cinerino.service.report.telemetry.searchGlobalStock({
             measuredFrom: measuredFrom.toDate(),
             measuredThrough: dateNowByUnitTime.toDate()
@@ -62,9 +63,11 @@ function main() {
         yield reportNumberOfTasksUnexecuted(globalTelemetries);
         // 販売者ごとにレポート送信
         yield Promise.all(movieTheaters.map((movieTheater) => __awaiter(this, void 0, void 0, function* () {
+            var _a;
+            const sellerName = (_a = movieTheater.name) === null || _a === void 0 ? void 0 : _a.ja;
             debug('reporting...seller:', movieTheater.id);
             const telemetriesBySellerId = sellerTelemetries.filter((telemetry) => telemetry.object.sellerId === movieTheater.id);
-            yield reportNumberOfTransactionsUnderway(movieTheater.name.ja, telemetriesBySellerId);
+            yield reportNumberOfTransactionsUnderway(sellerName, telemetriesBySellerId);
         })));
     });
 }

@@ -9,8 +9,8 @@
     }
   ],
   "dependencies": {
-    "@cinerino/api-nodejs-client": "2.0.0-alpha.53",
-    "@cinerino/domain": "^1.0.0",
+    "@cinerino/api-nodejs-client": "2.0.0-alpha.61",
+    "@cinerino/domain": "^9.4.1",
     "debug": "^3.2.6",
     "json2csv": "^3.11.5",
     "moment": "^2.24.0",

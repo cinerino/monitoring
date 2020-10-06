@@ -46,9 +46,10 @@ function main() {
         const measuredFrom = moment(dateNowByUnitTime)
             .add(numberOfAggregationUnit * -telemetryUnitTimeInSeconds, 'seconds');
         debug('reporting telemetries...', measuredFrom, '-', dateNowByUnitTime);
-        const sellerRepo = new cinerino.repository.Seller(mongoose.connection);
+        // const sellerRepo = new cinerino.repository.Seller(mongoose.connection);
         const telemetryRepo = new cinerino.repository.Telemetry(mongoose.connection);
-        const movieTheaters = yield sellerRepo.search({});
+        // const movieTheaters = await sellerRepo.search({});
+        const movieTheaters = [];
         const globalTelemetries = yield cinerino.service.report.telemetry.searchGlobalFlow({
             measuredFrom: measuredFrom.toDate(),
             measuredThrough: dateNowByUnitTime.toDate()
@@ -65,14 +66,16 @@ function main() {
         yield reportNumberOfTrialsOfTasks(globalTelemetries, measuredFrom.toDate(), dateNowByUnitTime.toDate()); // タスク試行回数
         // 販売者ごとにレポート送信
         yield Promise.all(movieTheaters.map((movieTheater) => __awaiter(this, void 0, void 0, function* () {
+            var _a;
+            const sellerName = (_a = movieTheater.name) === null || _a === void 0 ? void 0 : _a.ja;
             debug('reporting...seller:', movieTheater.id);
             const telemetriesBySellerId = sellerTelemetries.filter((telemetry) => telemetry.object.sellerId === movieTheater.id);
-            yield reportNumberOfTransactionsByStatuses(movieTheater.name.ja, telemetriesBySellerId, measuredFrom.toDate(), dateNowByUnitTime.toDate()); // ステータスごとの取引数
-            yield reportExpiredRatio(movieTheater.name.ja, telemetriesBySellerId, measuredFrom.toDate(), dateNowByUnitTime.toDate());
-            yield reportTimeLeftUntilEvent(movieTheater.name.ja, telemetriesBySellerId, measuredFrom.toDate(), dateNowByUnitTime.toDate());
-            yield reportTransactionRequiredTimes(movieTheater.name.ja, telemetriesBySellerId, measuredFrom.toDate(), dateNowByUnitTime.toDate()); // 平均所要時間
-            yield reportTransactionAmounts(movieTheater.name.ja, telemetriesBySellerId, measuredFrom.toDate(), dateNowByUnitTime.toDate()); // 平均金額
-            yield reportTransactionActions(movieTheater.name.ja, telemetriesBySellerId, measuredFrom.toDate(), dateNowByUnitTime.toDate()); // 平均アクション数
+            yield reportNumberOfTransactionsByStatuses(sellerName, telemetriesBySellerId, measuredFrom.toDate(), dateNowByUnitTime.toDate()); // ステータスごとの取引数
+            yield reportExpiredRatio(sellerName, telemetriesBySellerId, measuredFrom.toDate(), dateNowByUnitTime.toDate());
+            yield reportTimeLeftUntilEvent(sellerName, telemetriesBySellerId, measuredFrom.toDate(), dateNowByUnitTime.toDate());
+            yield reportTransactionRequiredTimes(sellerName, telemetriesBySellerId, measuredFrom.toDate(), dateNowByUnitTime.toDate()); // 平均所要時間
+            yield reportTransactionAmounts(sellerName, telemetriesBySellerId, measuredFrom.toDate(), dateNowByUnitTime.toDate()); // 平均金額
+            yield reportTransactionActions(sellerName, telemetriesBySellerId, measuredFrom.toDate(), dateNowByUnitTime.toDate()); // 平均アクション数
         })));
     });
 }

@@ -22,7 +22,7 @@ function main() {
     return __awaiter(this, void 0, void 0, function* () {
         debug('connecting mongodb...');
         yield mongoose.connect(process.env.MONGOLAB_URI, mongooseConnectionOptions_1.default);
-        const sellerRepo = new cinerino.repository.Seller(mongoose.connection);
+        // const sellerRepo = new cinerino.repository.Seller(mongoose.connection);
         const taskRepo = new cinerino.repository.Task(mongoose.connection);
         const telemetryRepo = new cinerino.repository.Telemetry(mongoose.connection);
         const transactionRepo = new cinerino.repository.Transaction(mongoose.connection);
@@ -35,7 +35,9 @@ function main() {
         // tslint:disable-next-line:no-magic-numbers
         const measuredAt = moment.unix((dateNow.unix() - (dateNow.unix() % 60)));
         // 劇場組織ごとに販売者向け測定データを作成する
-        const movieTheaters = yield sellerRepo.search({});
+        // const movieTheaters = await sellerRepo.search({});
+        // const movieTheaters = await sellerRepo.search({});
+        const movieTheaters = [];
         yield Promise.all(movieTheaters.map((movieTheater) => __awaiter(this, void 0, void 0, function* () {
             yield cinerino.service.report.telemetry.createFlow({
                 measuredAt: measuredAt.toDate(),

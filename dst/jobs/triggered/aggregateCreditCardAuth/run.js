@@ -52,7 +52,8 @@ function main() {
                 $lt: aggregationStartThrough
             },
             typeOf: cinerino.factory.actionType.AuthorizeAction,
-            'object.typeOf': { $exists: true, $eq: cinerino.factory.paymentMethodType.CreditCard }
+            'object.typeOf': { $exists: true, $eq: cinerino.factory.action.authorize.paymentMethod.any.ResultType.Payment },
+            'object.paymentMethod': { $exists: true, $eq: cinerino.factory.chevre.paymentMethodType.CreditCard }
         })
             .cursor();
         debug('action(s) found.');
@@ -181,14 +182,14 @@ ${userMessagesSummary.map((s) => `${s.key} | ${Math.floor(HUNDRED * s.count / nu
         // return;
         // backlogへ通知
         const users = yield request.get({
-            url: 'https://m-p.backlog.jp/api/v2/projects/SSKTS/users',
+            url: 'https://m-p.backlog.jp/api/v2/projects/CINERINO/users',
             json: true,
             qs: { apiKey: process.env.BACKLOG_API_KEY }
         })
             .then((body) => body);
         debug('notifying', users.length, 'people on backlog...');
         yield request.post({
-            url: 'https://m-p.backlog.jp/api/v2/issues/SSKTS-857/comments',
+            url: 'https://m-p.backlog.jp/api/v2/issues/CINERINO-571/comments',
             form: {
                 content: text,
                 notifiedUserId: users.map((user) => user.id)

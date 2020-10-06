@@ -41,10 +41,11 @@ export async function main() {
         .add(numberOfAggregationUnit * -telemetryUnitTimeInSeconds, 'seconds');
 
     debug('reporting telemetries measuredFrom - dateTo...', measuredFrom, dateNowByUnitTime);
-    const sellerRepo = new cinerino.repository.Seller(mongoose.connection);
+    // const sellerRepo = new cinerino.repository.Seller(mongoose.connection);
     const telemetryRepo = new cinerino.repository.Telemetry(mongoose.connection);
 
-    const movieTheaters = await sellerRepo.search({});
+    // const movieTheaters = await sellerRepo.search({});
+    const movieTheaters: cinerino.factory.chevre.seller.ISeller[] = [];
 
     const globalTelemetries = await cinerino.service.report.telemetry.searchGlobalStock({
         measuredFrom: measuredFrom.toDate(),
@@ -65,9 +66,10 @@ export async function main() {
 
     // 販売者ごとにレポート送信
     await Promise.all(movieTheaters.map(async (movieTheater) => {
+        const sellerName = (<any>movieTheater).name?.ja;
         debug('reporting...seller:', movieTheater.id);
         const telemetriesBySellerId = sellerTelemetries.filter((telemetry) => telemetry.object.sellerId === movieTheater.id);
-        await reportNumberOfTransactionsUnderway(movieTheater.name.ja, telemetriesBySellerId);
+        await reportNumberOfTransactionsUnderway(sellerName, telemetriesBySellerId);
     }));
 }
 

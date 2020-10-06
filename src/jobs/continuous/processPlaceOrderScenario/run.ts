@@ -22,8 +22,11 @@ mongoose.connect(<string>process.env.MONGOLAB_URI, mongooseConnectionOptions)
     .then()
     // tslint:disable-next-line:no-console
     .catch(console.error);
-const sellerRepo = new cinerino.repository.Seller(mongoose.connection);
-sellerRepo.search({})
+// const sellerRepo = new cinerino.repository.Seller(mongoose.connection);
+// sellerRepo.search({})
+new Promise<cinerino.factory.chevre.seller.ISeller[]>((resolve) => {
+    resolve([]);
+})
     .then((movieTheaters) => {
         movieTheaters.forEach((movieTheater) => {
             setInterval(
