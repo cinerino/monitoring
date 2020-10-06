@@ -27,13 +27,15 @@ startScenarios({
     intervals: (process.argv[3] !== undefined) ? Number(process.argv[3]) : 1000,
     // tslint:disable-next-line:no-magic-numbers
     sellerBranchCodes: (process.argv[4] !== undefined) ? process.argv[4].split(',') : [
-        '101', '112', '116', '118', '119', '117', '114', '102', '106', '108', '107', '110', '109', '113', '115'
+        '101', '102', '106', '107', '108', '109', '110', '112', '113', '114', '115', '116', '117', '118', '119', '120'
     ],
     apiEndpoint: process.env.API_ENDPOINT,
     // tslint:disable-next-line:no-magic-numbers
     minDurationInSeconds: (process.argv[5] !== undefined) ? Number(process.argv[5]) : 300,
     // tslint:disable-next-line:no-magic-numbers
-    maxDurationInSeconds: (process.argv[6] !== undefined) ? Number(process.argv[6]) : 800
+    maxDurationInSeconds: (process.argv[6] !== undefined) ? Number(process.argv[6]) : 800,
+    // tslint:disable-next-line:no-magic-numbers
+    projectId: (process.argv[7] !== undefined) ? process.argv[7] : 'cinerino'
 });
 // tslint:disable-next-line:max-func-body-length
 function startScenarios(configurations) {
@@ -63,9 +65,12 @@ function startScenarios(configurations) {
             // tslint:disable-next-line:insecure-random
             (configurations.maxDurationInSeconds - configurations.minDurationInSeconds) * Math.random()
                 + configurations.minDurationInSeconds);
-            const { progress, transaction, order, numberOfTryAuthorizeCreditCard } = yield processPlaceOrder.main(
-            // tslint:disable-next-line:no-magic-numbers
-            sellerBranchCode, durationInSeconds * 1000);
+            const { progress, transaction, order, numberOfTryAuthorizeCreditCard } = yield processPlaceOrder.main({
+                project: { id: configurations.projectId },
+                theaterCode: sellerBranchCode,
+                // tslint:disable-next-line:no-magic-numbers
+                durationInMillisecond: durationInSeconds * 1000
+            });
             result = {
                 processNumber: processNumber,
                 progress: progress,
@@ -203,13 +208,13 @@ unknown | ${Math.floor(HUNDRED * numbersOfResult.unknown / results.length)}% | $
         // await cinerino.service.notification.sendEmail(emailMessage)();
         // backlogへ通知
         const users = yield request.get({
-            url: `https://m-p.backlog.jp/api/v2/projects/SSKTS/users?apiKey=${process.env.BACKLOG_API_KEY}`,
+            url: `https://m-p.backlog.jp/api/v2/projects/CINERINO/users?apiKey=${process.env.BACKLOG_API_KEY}`,
             json: true
         })
             .then((body) => body);
         debug('notifying', users.length, 'people on backlog...');
         yield request.post({
-            url: `https://m-p.backlog.jp/api/v2/issues/SSKTS-621/comments?apiKey=${process.env.BACKLOG_API_KEY}`,
+            url: `https://m-p.backlog.jp/api/v2/issues/CINERINO-573/comments?apiKey=${process.env.BACKLOG_API_KEY}`,
             form: {
                 content: text,
                 notifiedUserId: users.map((user) => user.id)

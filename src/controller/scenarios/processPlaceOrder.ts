@@ -3,11 +3,9 @@
  * 注文取引シナリオ
  */
 import * as cinerino from '@cinerino/domain';
-
-import * as cinerinoapi from '@cinerino/api-nodejs-client';
+import * as cinerinoapi from '@cinerino/sdk';
 import * as createDebug from 'debug';
 import * as moment from 'moment';
-import * as util from 'util';
 
 const debug = createDebug('cinerino-monitoring');
 
@@ -19,25 +17,31 @@ const auth = new cinerinoapi.auth.ClientCredentials({
     state: 'teststate'
 });
 
-const eventService = new cinerinoapi.service.Event({
-    endpoint: <string>process.env.API_ENDPOINT,
-    auth: auth
-});
-const sellers = new cinerinoapi.service.Seller({
-    endpoint: <string>process.env.API_ENDPOINT,
-    auth: auth
-});
-const placeOrderService = new cinerinoapi.service.txn.PlaceOrder4sskts({
-    endpoint: <string>process.env.API_ENDPOINT,
-    auth: auth
-});
-const paymentService = new cinerinoapi.service.Payment({
-    endpoint: <string>process.env.API_ENDPOINT,
-    auth: auth
-});
-
 // tslint:disable-next-line:max-func-body-length
-export async function main(theaterCode: string, durationInMillisecond: number) {
+export async function main(params: {
+    project: { id: string };
+    theaterCode: string;
+    durationInMillisecond: number;
+}) {
+    const theaterCode = params.theaterCode;
+    const durationInMillisecond = params.durationInMillisecond;
+
+    const eventService = new cinerinoapi.service.Event({
+        endpoint: <string>process.env.API_ENDPOINT,
+        auth: auth,
+        project: params.project
+    });
+    const sellers = new cinerinoapi.service.Seller({
+        endpoint: <string>process.env.API_ENDPOINT,
+        auth: auth,
+        project: params.project
+    });
+    const placeOrderService = new cinerinoapi.service.txn.PlaceOrder4sskts({
+        endpoint: <string>process.env.API_ENDPOINT,
+        auth: auth,
+        project: params.project
+    });
+
     // 取引の進捗状況
     let progress = '';
 
@@ -70,7 +74,7 @@ export async function main(theaterCode: string, durationInMillisecond: number) {
         debug(progress);
 
         const availableEvents = screeningEvents.filter(
-            (event) => ((<any>event).offer.availability !== 0)
+            (event) => (typeof event.remainingAttendeeCapacity === 'number' && event.remainingAttendeeCapacity > 0)
         );
         if (availableEvents.length === 0) {
             throw new Error('No available events');
@@ -102,8 +106,8 @@ export async function main(theaterCode: string, durationInMillisecond: number) {
                 ]
             },
             seller: {
-                typeOf: cinerinoapi.factory.organizationType.MovieTheater,
-                id: seller.id
+                typeOf: seller.typeOf,
+                id: String(seller.id)
             }
         });
         progress = `transaction started. ${transaction.id}`;
@@ -113,7 +117,7 @@ export async function main(theaterCode: string, durationInMillisecond: number) {
         // このサンプルは1座席購入なので、制限単位が1枚以上の券種に絞る
         const salesTicketResult = await eventService.searchTicketOffers4COA({
             event: { id: screeningEvent.id },
-            seller: { typeOf: seller.typeOf, id: seller.id },
+            seller: { typeOf: seller.typeOf, id: String(seller.id) },
             store: { id: <string>process.env.API_CLIENT_ID }
         })
             .then((results) => results.filter((result) => {
@@ -126,13 +130,14 @@ export async function main(theaterCode: string, durationInMillisecond: number) {
         debug(progress);
 
         // search available seats from cinerino.COA
-        const screeningRoomSectionOffer = await eventService.searchOffers({
+        const offers = await eventService.searchOffers({
             event: { id: screeningEvent.id }
         });
-        progress = `${screeningRoomSectionOffer.length} sections available.`;
+        const seats = offers;
+        progress = `At least ${seats.length} seats available.`;
         debug(progress);
-        const sectionCode = screeningRoomSectionOffer[0].branchCode;
-        const availableSeatNumbers = screeningRoomSectionOffer[0].containsPlace
+        const sectionCode = String(seats[0].branchCode);
+        const availableSeatNumbers = seats[0].containsPlace
             .filter((seat) => {
                 return Array.isArray(seat.offers)
                     && seat.offers.length > 0
@@ -265,18 +270,14 @@ export async function main(theaterCode: string, durationInMillisecond: number) {
         }
 
         const amount = seatReservationAuthorization.result.price;
-        const orderIdPrefix = util.format(
-            '%s%s%s',
-            moment()
-                .format('YYYYMMDD'),
-            theaterCode,
-            // tslint:disable-next-line:no-magic-numbers
-            `00000000${seatReservationAuthorization.result.responseBody.tmpReserveNum}`.slice(-8)
-        );
-        progress = `authorizing credit card... ${orderIdPrefix}`;
+        progress = `authorizing credit card... amount:${amount}`;
         debug(progress);
         // tslint:disable-next-line:max-line-length
-        const { creditCardAuthorization, numberOfTryAuthorizeCreditCard } = await authorieCreditCardUntilSuccess(transaction.id, orderIdPrefix, amount);
+        const { creditCardAuthorization, numberOfTryAuthorizeCreditCard } = await authorieCreditCardUntilSuccess({
+            project: params.project,
+            transactionId: transaction.id,
+            amount
+        });
         progress = `credit card authorized with ${numberOfTryAuthorizeCreditCard} tries. ${creditCardAuthorization.id}`;
         debug(progress);
 
@@ -324,7 +325,20 @@ export async function main(theaterCode: string, durationInMillisecond: number) {
 
 const RETRY_INTERVAL_IN_MILLISECONDS = 5000;
 const MAX_NUMBER_OF_RETRY = 10;
-async function authorieCreditCardUntilSuccess(transactionId: string, orderIdPrefix: string, amount: number) {
+async function authorieCreditCardUntilSuccess(params: {
+    project: { id: string };
+    transactionId: string;
+    amount: number;
+}) {
+    const transactionId = params.transactionId;
+    const amount = params.amount;
+
+    const paymentService = new cinerinoapi.service.Payment({
+        endpoint: <string>process.env.API_ENDPOINT,
+        auth: auth,
+        project: params.project
+    });
+
     // tslint:disable-next-line:no-null-keyword
     let creditCardAuthorization = null;
     let numberOfTryAuthorizeCreditCard = 0;
@@ -338,15 +352,13 @@ async function authorieCreditCardUntilSuccess(transactionId: string, orderIdPref
             creditCardAuthorization = await paymentService.authorizeCreditCard({
                 purpose: { typeOf: cinerinoapi.factory.transactionType.PlaceOrder, id: transactionId },
                 object: {
-                    typeOf: cinerinoapi.factory.paymentMethodType.CreditCard,
-                    // 試行毎にオーダーIDを変更
-                    // tslint:disable-next-line:no-magic-numbers
-                    orderId: `${orderIdPrefix}${`00${numberOfTryAuthorizeCreditCard.toString()}`.slice(-2)}`,
+                    typeOf: cinerinoapi.factory.action.authorize.paymentMethod.any.ResultType.Payment,
+                    paymentMethod: cinerinoapi.factory.chevre.paymentMethodType.CreditCard,
                     amount: amount,
                     method: cinerino.GMO.utils.util.Method.Lump,
                     creditCard: {
                         cardNo: '4111111111111111',
-                        expire: '2024',
+                        expire: '0124',
                         holderName: 'TARO MOTION'
                     }
                 }
